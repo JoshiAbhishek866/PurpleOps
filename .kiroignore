@@ -1,0 +1,105 @@
+# .kiroignore - Sentinel AI
+# ============================================================
+# Tells Kiro which files/folders to EXCLUDE from its context.
+# Equivalent to .claudeignore / .gitignore but for Kiro AI.
+#
+# Use this to prevent sensitive data, large binaries, or
+# irrelevant files from being loaded into Kiro's context window.
+# ============================================================
+
+# ── Secrets & Credentials ───────────────────────────────────
+.env
+.env.local
+.env.production
+.env.staging
+infrastructure/terraform.tfvars.local
+infrastructure/secrets.tfvars
+infrastructure/prod.tfvars
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/*.crt
+**/*.cer
+
+# ── Terraform State (contains sensitive infra details) ──────
+infrastructure/.terraform/
+infrastructure/terraform.tfstate
+infrastructure/terraform.tfstate.backup
+infrastructure/*.tfplan
+
+# ── Python Cache & Build Artifacts ──────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+venv/
+.venv/
+env/
+
+# ── Node / Frontend Build Artifacts ─────────────────────────
+node_modules/
+frontend/node_modules/
+admin/node_modules/
+frontend/dist/
+admin/dist/
+*.min.js
+*.min.css
+
+# ── Large Binary / Media Files ───────────────────────────────
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.ico
+*.webp
+*.mp4
+*.mp3
+*.zip
+*.tar.gz
+*.whl
+*.glb
+*.ttf
+*.woff
+*.woff2
+
+# ── Database & Storage ───────────────────────────────────────
+chroma_db/
+*.db
+*.sqlite
+*.sqlite3
+src/uploads/
+
+# ── Logs ─────────────────────────────────────────────────────
+logs/
+*.log
+
+# ── IDE & OS ─────────────────────────────────────────────────
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Test Coverage & Reports ──────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# ── HavoSec Source (large, already analyzed & integrated) ────
+HavoSec-Main-main/admin/public/
+HavoSec-Main-main/frontend/public/
+HavoSec-Main-main/content/pdfs/
+HavoSec-Main-main/content/xl/
+
+# ── Kiro Internal ────────────────────────────────────────────
+.kiro/cache/
+.kiro/sessions/

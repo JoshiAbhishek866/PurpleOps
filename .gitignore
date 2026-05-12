@@ -64,3 +64,27 @@ htmlcov/
 # Distribution
 *.tar.gz
 *.whl
+
+# Terraform
+infrastructure/.terraform/
+infrastructure/.terraform.lock.hcl
+infrastructure/terraform.tfstate
+infrastructure/terraform.tfstate.backup
+infrastructure/terraform.tfstate.*.backup
+infrastructure/*.tfplan
+infrastructure/terraform.tfvars.local
+infrastructure/override.tf
+infrastructure/override.tf.json
+infrastructure/*_override.tf
+infrastructure/*_override.tf.json
+infrastructure/.terraformrc
+infrastructure/terraform.rc
+
+# Sensitive Terraform variable overrides (use TF_VAR_* env vars instead)
+infrastructure/secrets.tfvars
+infrastructure/prod.tfvars
+infrastructure/staging.tfvars
+
+# Kiro cache
+.kiro/cache/
+.kiro/sessions/
