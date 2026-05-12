@@ -66,6 +66,29 @@ sentinel-ai/
 └── PROJECT_STRUCTURE.md               # This file
 ```
 
+## v2.0 Architecture: Hierarchical Supervisor Pattern
+
+```
+CoordinatorAgent (Supervisor)
+├── Owns CampaignState (single source of truth)
+├── Enforces token budgets & turn limits (prevents infinite loops)
+├── Routes tasks → Red Agent or Blue Agent
+├── Generates deterministic audit trails
+└── Registers campaigns to AWS Bedrock AgentCore Registry
+
+RedAgent (Offensive Worker)          BlueAgent (Defensive Worker)
+├── SQL Injection                    ├── WAF Rule Updates
+├── XSS Testing                      ├── Security Group Modification
+└── Privilege Escalation             ├── RAG Knowledge Query
+                                     └── Compliance Report Generation
+
+AgentRegistry (AWS Bedrock AgentCore)
+├── Version-controlled agent storage ("ECR for AI Agents")
+├── Cross-account agent discovery
+├── Capability-based agent lookup
+└── Cost tracking per agent version
+```
+
 ## Key Components
 
 ### 1. Kiro Configuration (`.kiro/`)
