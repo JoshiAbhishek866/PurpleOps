@@ -1,6 +1,5 @@
 ###############################################################################
 # Sentinel AI - Main Terraform Configuration
-# Provisions all AWS infrastructure for the platform
 ###############################################################################
 
 terraform {
@@ -9,11 +8,11 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.0"
+      version = "~> 5.31"  # 5.31+ required for aws_bedrockagent_* resources
     }
   }
 
-  # Remote state — update bucket/key before deploying
+  # Remote state — create the bucket + lock table first (see bootstrap/README.md)
   backend "s3" {
     bucket         = "sentinel-ai-terraform-state"
     key            = "sentinel-ai/terraform.tfstate"
@@ -44,9 +43,12 @@ data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
 locals {
-  account_id = data.aws_caller_identity.current.account_id
-  region     = data.aws_region.current.name
+  account_id  = data.aws_caller_identity.current.account_id
+  region      = data.aws_region.current.name
   name_prefix = "sentinel-ai-${var.environment}"
+
+  # ECR image URI: use override var if provided, else use the ECR repo created here
+  ecr_image_uri = var.ecr_image_uri != "" ? var.ecr_image_uri : "${aws_ecr_repository.sentinel_ai.repository_url}:latest"
 }
 
 ###############################################################################
@@ -78,9 +80,7 @@ resource "aws_dynamodb_table" "campaign_sessions" {
     kms_key_arn = aws_kms_key.sentinel_ai.arn
   }
 
-  tags = {
-    Name = "CampaignSessions"
-  }
+  tags = { Name = "CampaignSessions" }
 }
 
 resource "aws_dynamodb_table" "audit_logs" {
@@ -108,9 +108,7 @@ resource "aws_dynamodb_table" "audit_logs" {
     kms_key_arn = aws_kms_key.sentinel_ai.arn
   }
 
-  tags = {
-    Name = "AuditLogs"
-  }
+  tags = { Name = "AuditLogs" }
 }
 
 resource "aws_dynamodb_table" "agent_registry" {
@@ -134,9 +132,7 @@ resource "aws_dynamodb_table" "agent_registry" {
     kms_key_arn = aws_kms_key.sentinel_ai.arn
   }
 
-  tags = {
-    Name = "SentinelAgentRegistry"
-  }
+  tags = { Name = "SentinelAgentRegistry" }
 }
 
 ###############################################################################
@@ -199,9 +195,7 @@ resource "aws_kms_key" "sentinel_ai" {
   deletion_window_in_days = 7
   enable_key_rotation     = true
 
-  tags = {
-    Name = "${local.name_prefix}-kms"
-  }
+  tags = { Name = "${local.name_prefix}-kms" }
 }
 
 resource "aws_kms_alias" "sentinel_ai" {
@@ -210,10 +204,88 @@ resource "aws_kms_alias" "sentinel_ai" {
 }
 
 ###############################################################################
-# IAM Roles — Red Agent, Blue Agent, Coordinator
+# IAM — App Runner instance role (used by the running container)
 ###############################################################################
 
-# Red Agent Role (Offensive — read-only)
+resource "aws_iam_role" "apprunner_instance" {
+  name = "${local.name_prefix}-apprunner-instance-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "tasks.apprunner.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "apprunner_instance" {
+  name = "${local.name_prefix}-apprunner-instance-policy"
+  role = aws_iam_role.apprunner_instance.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:PutItem", "dynamodb:GetItem",
+          "dynamodb:UpdateItem", "dynamodb:Query", "dynamodb:Scan"
+        ]
+        Resource = [
+          aws_dynamodb_table.campaign_sessions.arn,
+          aws_dynamodb_table.audit_logs.arn,
+          aws_dynamodb_table.agent_registry.arn
+        ]
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["bedrock:InvokeModel", "bedrock:RetrieveAndGenerate", "bedrock:Retrieve"]
+        Resource = "*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["s3:PutObject", "s3:GetObject"]
+        Resource = "${aws_s3_bucket.artifacts.arn}/*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["wafv2:UpdateWebACL", "wafv2:GetWebACL", "wafv2:ListWebACLs"]
+        Resource = "*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["bedrock:CreateAgent", "bedrock:GetAgent", "bedrock:ListAgents"]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# IAM — App Runner access role (pulls image from ECR)
+resource "aws_iam_role" "apprunner_access" {
+  name = "${local.name_prefix}-apprunner-access-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "build.apprunner.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "apprunner_ecr" {
+  role       = aws_iam_role.apprunner_access.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSAppRunnerServicePolicyForECRAccess"
+}
+
+###############################################################################
+# IAM — Separate roles for Red/Blue/Coordinator (for future STS assume)
+###############################################################################
+
 resource "aws_iam_role" "red_agent" {
   name = "${local.name_prefix}-red-agent-role"
 
@@ -221,7 +293,7 @@ resource "aws_iam_role" "red_agent" {
     Version = "2012-10-17"
     Statement = [{
       Effect    = "Allow"
-      Principal = { Service = "apprunner.amazonaws.com" }
+      Principal = { AWS = aws_iam_role.apprunner_instance.arn }
       Action    = "sts:AssumeRole"
     }]
   })
@@ -253,7 +325,6 @@ resource "aws_iam_role_policy" "red_agent" {
   })
 }
 
-# Blue Agent Role (Defensive — write to security controls)
 resource "aws_iam_role" "blue_agent" {
   name = "${local.name_prefix}-blue-agent-role"
 
@@ -261,7 +332,7 @@ resource "aws_iam_role" "blue_agent" {
     Version = "2012-10-17"
     Statement = [{
       Effect    = "Allow"
-      Principal = { Service = "apprunner.amazonaws.com" }
+      Principal = { AWS = aws_iam_role.apprunner_instance.arn }
       Action    = "sts:AssumeRole"
     }]
   })
@@ -273,28 +344,20 @@ resource "aws_iam_role_policy" "blue_agent" {
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "wafv2:UpdateWebACL",
-          "wafv2:CreateWebACL",
-          "ec2:ModifySecurityGroupRules",
-          "dynamodb:PutItem",
-          "s3:PutObject"
-        ]
-        Resource = "*"
-      },
-      {
-        Effect   = "Allow"
-        Action   = ["bedrock:InvokeModel", "bedrock:RetrieveAndGenerate"]
-        Resource = "*"
-      }
-    ]
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "wafv2:UpdateWebACL", "wafv2:CreateWebACL",
+        "ec2:ModifySecurityGroupRules",
+        "dynamodb:PutItem",
+        "s3:PutObject",
+        "bedrock:InvokeModel", "bedrock:RetrieveAndGenerate"
+      ]
+      Resource = "*"
+    }]
   })
 }
 
-# Coordinator Role (Orchestration only)
 resource "aws_iam_role" "coordinator" {
   name = "${local.name_prefix}-coordinator-role"
 
@@ -302,7 +365,7 @@ resource "aws_iam_role" "coordinator" {
     Version = "2012-10-17"
     Statement = [{
       Effect    = "Allow"
-      Principal = { Service = "apprunner.amazonaws.com" }
+      Principal = { AWS = aws_iam_role.apprunner_instance.arn }
       Action    = "sts:AssumeRole"
     }]
   })
@@ -318,11 +381,8 @@ resource "aws_iam_role_policy" "coordinator" {
       {
         Effect = "Allow"
         Action = [
-          "dynamodb:PutItem",
-          "dynamodb:GetItem",
-          "dynamodb:UpdateItem",
-          "dynamodb:Query",
-          "dynamodb:Scan"
+          "dynamodb:PutItem", "dynamodb:GetItem",
+          "dynamodb:UpdateItem", "dynamodb:Query", "dynamodb:Scan"
         ]
         Resource = [
           aws_dynamodb_table.campaign_sessions.arn,
@@ -352,35 +412,40 @@ resource "aws_apprunner_service" "sentinel_ai" {
   service_name = "${local.name_prefix}-api"
 
   source_configuration {
+    authentication_configuration {
+      access_role_arn = aws_iam_role.apprunner_access.arn
+    }
+
     image_repository {
-      image_identifier      = var.ecr_image_uri
+      image_identifier      = local.ecr_image_uri
       image_repository_type = "ECR"
 
       image_configuration {
         port = "8000"
         runtime_environment_variables = {
-          AWS_REGION                  = var.aws_region
-          BEDROCK_MODEL_ID            = var.bedrock_model_id
-          DYNAMODB_TABLE_CAMPAIGNS    = aws_dynamodb_table.campaign_sessions.name
-          DYNAMODB_TABLE_AUDIT        = aws_dynamodb_table.audit_logs.name
-          S3_BUCKET_REPORTS           = aws_s3_bucket.artifacts.bucket
-          AGENT_REGISTRY_TABLE        = aws_dynamodb_table.agent_registry.name
-          RED_AGENT_ROLE_ARN          = aws_iam_role.red_agent.arn
-          BLUE_AGENT_ROLE_ARN         = aws_iam_role.blue_agent.arn
-          COORD_AGENT_ROLE_ARN        = aws_iam_role.coordinator.arn
-          DEFAULT_MAX_ATTACK_TURNS    = "5"
-          DEFAULT_MAX_DEFENSE_TURNS   = "5"
-          DEFAULT_TOKEN_BUDGET        = "50000"
-          AGENT_MODE                  = "default"
+          AWS_REGION               = var.aws_region
+          BEDROCK_MODEL_ID         = var.bedrock_model_id
+          DYNAMODB_TABLE_CAMPAIGNS = aws_dynamodb_table.campaign_sessions.name
+          DYNAMODB_TABLE_AUDIT     = aws_dynamodb_table.audit_logs.name
+          S3_BUCKET_REPORTS        = aws_s3_bucket.artifacts.bucket
+          AGENT_REGISTRY_TABLE     = aws_dynamodb_table.agent_registry.name
+          RED_AGENT_ROLE_ARN       = aws_iam_role.red_agent.arn
+          BLUE_AGENT_ROLE_ARN      = aws_iam_role.blue_agent.arn
+          COORD_AGENT_ROLE_ARN     = aws_iam_role.coordinator.arn
+          DEFAULT_MAX_ATTACK_TURNS = "5"
+          DEFAULT_MAX_DEFENSE_TURNS = "5"
+          DEFAULT_TOKEN_BUDGET     = "50000"
+          AGENT_MODE               = "default"
         }
       }
     }
-    auto_deployments_enabled = true
+    auto_deployments_enabled = false  # CI/CD pipeline handles deployments
   }
 
   instance_configuration {
-    cpu    = var.app_runner_cpu
-    memory = var.app_runner_memory
+    cpu               = var.app_runner_cpu
+    memory            = var.app_runner_memory
+    instance_role_arn = aws_iam_role.apprunner_instance.arn
   }
 
   health_check_configuration {
@@ -392,18 +457,16 @@ resource "aws_apprunner_service" "sentinel_ai" {
     unhealthy_threshold = 5
   }
 
-  tags = {
-    Name = "${local.name_prefix}-api"
-  }
+  tags = { Name = "${local.name_prefix}-api" }
 }
 
 ###############################################################################
-# CloudWatch — Alarms & Log Groups
+# CloudWatch — Log Group & Alarms
 ###############################################################################
 
 resource "aws_cloudwatch_log_group" "sentinel_ai" {
   name              = "/aws/apprunner/${local.name_prefix}"
-  retention_in_days = 30
+  retention_in_days = var.log_retention_days
 }
 
 resource "aws_cloudwatch_metric_alarm" "high_token_usage" {

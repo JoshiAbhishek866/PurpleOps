@@ -1,6 +1,5 @@
 ###############################################################################
 # Sentinel AI - AWS WAF
-# Protects the API and acts as attack detection surface for Red Agent
 ###############################################################################
 
 resource "aws_wafv2_web_acl" "sentinel_ai" {
@@ -13,20 +12,16 @@ resource "aws_wafv2_web_acl" "sentinel_ai" {
     allow {}
   }
 
-  # AWS Managed Rules — Core Rule Set
   rule {
     name     = "AWSManagedRulesCommonRuleSet"
     priority = 1
-
     override_action { none {} }
-
     statement {
       managed_rule_group_statement {
         name        = "AWSManagedRulesCommonRuleSet"
         vendor_name = "AWS"
       }
     }
-
     visibility_config {
       cloudwatch_metrics_enabled = true
       metric_name                = "${local.name_prefix}-common-rules"
@@ -34,20 +29,16 @@ resource "aws_wafv2_web_acl" "sentinel_ai" {
     }
   }
 
-  # SQL Injection protection
   rule {
     name     = "AWSManagedRulesSQLiRuleSet"
     priority = 2
-
     override_action { none {} }
-
     statement {
       managed_rule_group_statement {
         name        = "AWSManagedRulesSQLiRuleSet"
         vendor_name = "AWS"
       }
     }
-
     visibility_config {
       cloudwatch_metrics_enabled = true
       metric_name                = "${local.name_prefix}-sqli-rules"
@@ -55,20 +46,16 @@ resource "aws_wafv2_web_acl" "sentinel_ai" {
     }
   }
 
-  # Rate limiting — 100 req/5min per IP
   rule {
     name     = "RateLimitRule"
     priority = 3
-
     action { block {} }
-
     statement {
       rate_based_statement {
         limit              = 100
         aggregate_key_type = "IP"
       }
     }
-
     visibility_config {
       cloudwatch_metrics_enabled = true
       metric_name                = "${local.name_prefix}-rate-limit"
@@ -82,23 +69,58 @@ resource "aws_wafv2_web_acl" "sentinel_ai" {
     sampled_requests_enabled   = true
   }
 
-  tags = {
-    Name = "${local.name_prefix}-waf"
+  tags = { Name = "${local.name_prefix}-waf" }
+}
+
+# WAF logging — must use Kinesis Firehose or S3, NOT CloudWatch log group
+resource "aws_kinesis_firehose_delivery_stream" "waf_logs" {
+  count       = var.enable_waf ? 1 : 0
+  # WAF log destination names must start with "aws-waf-logs-"
+  name        = "aws-waf-logs-${local.name_prefix}"
+  destination = "extended_s3"
+
+  extended_s3_configuration {
+    role_arn   = aws_iam_role.firehose_waf[0].arn
+    bucket_arn = aws_s3_bucket.artifacts.arn
+    prefix     = "waf-logs/"
   }
+
+  tags = { Name = "${local.name_prefix}-waf-firehose" }
 }
 
-# WAF Logging to S3
-resource "aws_wafv2_web_acl_logging_configuration" "sentinel_ai" {
+resource "aws_iam_role" "firehose_waf" {
   count = var.enable_waf ? 1 : 0
+  name  = "${local.name_prefix}-firehose-waf-role"
 
-  log_destination_configs = [aws_cloudwatch_log_group.waf[0].arn]
-  resource_arn            = aws_wafv2_web_acl.sentinel_ai[0].arn
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "firehose.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
 }
 
-resource "aws_cloudwatch_log_group" "waf" {
-  count             = var.enable_waf ? 1 : 0
-  name              = "aws-waf-logs-${local.name_prefix}"
-  retention_in_days = var.log_retention_days
+resource "aws_iam_role_policy" "firehose_waf" {
+  count = var.enable_waf ? 1 : 0
+  name  = "${local.name_prefix}-firehose-waf-policy"
+  role  = aws_iam_role.firehose_waf[0].id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["s3:PutObject", "s3:GetBucketLocation", "s3:ListBucket"]
+      Resource = [aws_s3_bucket.artifacts.arn, "${aws_s3_bucket.artifacts.arn}/*"]
+    }]
+  })
+}
+
+resource "aws_wafv2_web_acl_logging_configuration" "sentinel_ai" {
+  count                   = var.enable_waf ? 1 : 0
+  log_destination_configs = [aws_kinesis_firehose_delivery_stream.waf_logs[0].arn]
+  resource_arn            = aws_wafv2_web_acl.sentinel_ai[0].arn
 }
 
 output "waf_web_acl_arn" {
