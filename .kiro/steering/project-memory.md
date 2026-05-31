@@ -3,7 +3,7 @@ inclusion: always
 ---
 
 # Sentinel AI - Project Memory
-> Last Updated: May 13, 2026
+> Last Updated: May 31, 2026
 > Always include this file in context for all interactions.
 
 ---
@@ -242,20 +242,33 @@ AGENT_REGISTRY_TABLE=SentinelAgentRegistry
 ## 8. Git Status
 
 - **Remote**: https://github.com/JoshiAbhishek866/Sentinal-AI.git
-- **Active branch**: Test
-- **Last push**: Successfully pushed to Test branch
-- **Auth method**: HTTPS with Personal Access Token
-- **Note**: Cached credentials were for "AbhishekScale" — use token in URL for pushes
+- **Active branch**: Test (merged into main via force push)
+- **Both branches at**: `f17834c` — Merge main into Test
+- **Auth method**: HTTPS with Personal Access Token embedded in URL
+- **Token**: stored in git remote URL (do not log)
+- **PR #3**: Test → main — conflicts resolved, both branches identical
 
 ---
 
-## 9. Pending Work
+## 9. Steering Files Active
+
+| File | Purpose |
+|---|---|
+| `project-memory.md` | Project context, decisions, git status, pending work |
+| `karpathy-principles.md` | 4 coding principles: Think Before Coding, Simplicity First, Surgical Changes, Goal-Driven Execution |
+| `aws-aidlc-rules/core-workflow.md` | AI-DLC workflow orchestration |
+| `aws-aidlc-rule-details/` | Stage-specific rules (inception, construction, operations) |
+
+---
+
+## 10. Pending Work
 
 ### High Priority
-- [ ] Delete addressed files from `HavoSec-Main-main/` (user requested, pending)
 - [ ] Wire HavoSec routes into `src/main.py`
 - [ ] Add WebSocket support for real-time campaign updates
 - [ ] Build Vue.js frontend with 3D architecture visualization
+- [ ] Delete addressed files from `HavoSec-Main-main/` (pending confirmation)
+- [ ] Run `terraform init` and deploy infrastructure to AWS
 
 ### Medium Priority
 - [ ] Create DynamoDB tables via CDK/CLI
@@ -271,7 +284,7 @@ AGENT_REGISTRY_TABLE=SentinelAgentRegistry
 
 ---
 
-## 10. Cost Model
+## 11. Cost Model
 
 | Scenario | Monthly Cost |
 |---|---|
@@ -281,7 +294,7 @@ AGENT_REGISTRY_TABLE=SentinelAgentRegistry
 
 ---
 
-## 11. Compliance Targets
+## 12. Compliance Targets
 
 - SOC 2 Type II aligned
 - ISO 27001 aligned
@@ -289,13 +302,15 @@ AGENT_REGISTRY_TABLE=SentinelAgentRegistry
 
 ---
 
-## 12. Important Notes for AI Assistant
+## 13. Important Notes for AI Assistant
 
 1. **This is a startup project** — not a hackathon. Think enterprise-grade.
-2. **Coordinator Agent is the entry point** for all campaigns — never call Red/Blue directly from API.
-3. **HavoSec-Main-main/** is still present — user wants to delete addressed files but hasn't confirmed yet.
-4. **Git auth**: Use `https://TOKEN@github.com/JoshiAbhishek866/Sentinal-AI.git` format for pushes.
-5. **Agent Registry** uses DynamoDB as fallback when Bedrock AgentCore is not available.
-6. **LangGraph** is opt-in via `AGENT_MODE=langgraph` env var — default uses AgentExecutor.
-7. **13 total agents**: 5 offensive + 5 defensive + 3 core (from HavoSec integration).
-8. **Always check `src/core/orchestrator.py`** for the full 13-agent workflow system.
+2. **Karpathy principles are active** — always Think Before Coding, keep changes Surgical, stay Simple, define Goals.
+3. **Coordinator Agent is the entry point** for all campaigns — never call Red/Blue directly from API.
+4. **HavoSec-Main-main/** is still present — user wants to delete addressed files but hasn't confirmed yet.
+5. **Git auth**: Use `https://TOKEN@github.com/JoshiAbhishek866/Sentinal-AI.git` format for pushes.
+6. **Agent Registry** uses DynamoDB as fallback when Bedrock AgentCore is not available.
+7. **LangGraph** is opt-in via `AGENT_MODE=langgraph` env var — default uses AgentExecutor.
+8. **13 total agents**: 5 offensive + 5 defensive + 3 core (from HavoSec integration).
+9. **Always check `src/core/orchestrator.py`** for the full 13-agent workflow system.
+10. **Infrastructure**: Full Terraform in `infrastructure/` — ECR, Bedrock KB, WAF, CI/CD, EventBridge.
