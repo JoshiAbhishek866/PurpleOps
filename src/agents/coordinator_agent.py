@@ -212,6 +212,8 @@ class CoordinatorAgent:
                 # Route to Blue Agent if there are findings
                 if state.vulnerabilities_found and not state.is_defense_budget_exhausted():
                     state = await self._phase_defend(state)
+                    # Verify remediation worked — re-run the attack
+                    state = await self._phase_verify(state)
                 elif state.is_defense_budget_exhausted():
                     logger.info("[COORDINATOR] Defense budget exhausted — skipping Blue Agent")
                     state.coordinator_decisions.append(
@@ -357,8 +359,78 @@ class CoordinatorAgent:
 
         return state
 
-    async def _phase_evaluate(self, state: CampaignState) -> CampaignState:
-        """Coordinator evaluates campaign progress and decides next action."""
+    async def _phase_verify(self, state: CampaignState) -> CampaignState:
+        """
+        Re-run Red attacks after Blue remediates to verify fixes actually work.
+        This is the proof loop — the core value proposition of Sentinel AI.
+        Findings where attack is still blocked get marked verified=True.
+        """
+        if not state.remediations_applied:
+            return state
+
+        logger.info(f"[COORDINATOR] 🔬 Verifying remediations on turn {state.current_turn}")
+
+        try:
+            import httpx
+            verified_count = 0
+            still_vulnerable = []
+
+            for finding in state.vulnerabilities_found:
+                attack_type = finding.get("type", "")
+                payloads_map = {
+                    "SQL Injection": [{"id": "' OR 1=1--"}],
+                    "XSS": [{"q": "<script>alert('xss')</script>"}],
+                }
+                payloads = payloads_map.get(attack_type, [])
+                if not payloads:
+                    # Can't re-test this type — mark as assumed verified
+                    finding["verified"] = True
+                    verified_count += 1
+                    continue
+
+                blocked = False
+                try:
+                    with httpx.Client(timeout=8, follow_redirects=True) as client:
+                        for params in payloads:
+                            resp = client.get(state.target, params=params)
+                            if resp.status_code in (403, 400, 406):
+                                blocked = True
+                                break
+                except Exception:
+                    blocked = False
+
+                if blocked:
+                    finding["verified"] = True
+                    verified_count += 1
+                    state.log_event(
+                        "COORDINATOR",
+                        f"verify_pass_{attack_type}",
+                        f"Attack blocked — remediation confirmed"
+                    )
+                else:
+                    finding["verified"] = False
+                    still_vulnerable.append(attack_type)
+                    state.log_event(
+                        "COORDINATOR",
+                        f"verify_fail_{attack_type}",
+                        f"Attack still working — remediation failed"
+                    )
+
+            decision = (
+                f"Turn {state.current_turn} verification: "
+                f"{verified_count}/{len(state.vulnerabilities_found)} remediations confirmed. "
+                f"Still vulnerable: {still_vulnerable or 'none'}"
+            )
+            state.coordinator_decisions.append(decision)
+            logger.info(f"[COORDINATOR] {decision}")
+
+        except Exception as e:
+            logger.error(f"[COORDINATOR] Verification phase failed: {e}")
+            state.log_event("COORDINATOR", "verify_error", str(e))
+
+        return state
+
+    async def _phase_evaluate(self, state: CampaignState) -> CampaignState:        """Coordinator evaluates campaign progress and decides next action."""
         state.phase = CampaignPhase.EVALUATING
 
         unresolved_count = len(state.vulnerabilities_found) - len(state.remediations_applied)

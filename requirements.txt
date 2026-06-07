@@ -20,7 +20,7 @@ langgraph==0.0.40
 
 # Utilities
 python-dotenv==1.0.0
-httpx==0.26.0
+httpx==0.26.0         # Real HTTP attack execution in Red Agent
 asyncio==3.4.3
 
 # Logging & Monitoring
