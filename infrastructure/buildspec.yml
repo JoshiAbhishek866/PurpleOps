@@ -1,5 +1,5 @@
 version: 0.2
-# CodeBuild buildspec — builds Docker image and pushes to ECR
+# CodeBuild buildspec — builds Docker image, pushes to ECR, triggers App Runner deployment
 
 phases:
   pre_build:
@@ -20,9 +20,11 @@ phases:
       - echo Pushing image to ECR...
       - docker push $ECR_REPO_URI:$IMAGE_TAG
       - docker push $ECR_REPO_URI:latest
-      - echo Writing image definitions...
-      - printf '[{"name":"sentinel-ai","imageUri":"%s"}]' $ECR_REPO_URI:$IMAGE_TAG > imagedefinitions.json
+      - echo Triggering App Runner deployment...
+      - aws apprunner start-deployment --service-arn $APP_RUNNER_SERVICE_ARN --region $AWS_REGION
+      - echo Deployment triggered successfully.
 
 artifacts:
   files:
     - imagedefinitions.json
+  discard-paths: yes

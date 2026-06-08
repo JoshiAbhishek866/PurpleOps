@@ -1,9 +1,22 @@
 ###############################################################################
 # Sentinel AI - CI/CD Pipeline
-# CodePipeline: GitHub → CodeBuild → ECR → App Runner
+# CodePipeline: GitHub → CodeBuild (build + push ECR) → App Runner deploy
 ###############################################################################
 
-# CodeBuild role
+# S3 bucket for pipeline artifacts
+resource "aws_s3_bucket" "cicd_artifacts" {
+  bucket = "${local.name_prefix}-cicd-${local.account_id}"
+}
+
+resource "aws_s3_bucket_public_access_block" "cicd_artifacts" {
+  bucket                  = aws_s3_bucket.cicd_artifacts.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# CodeBuild IAM role
 resource "aws_iam_role" "codebuild" {
   name = "${local.name_prefix}-codebuild-role"
 
@@ -39,37 +52,26 @@ resource "aws_iam_role_policy" "codebuild" {
         Resource = "*"
       },
       {
-        Effect = "Allow"
-        Action = [
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents"
-        ]
+        Effect   = "Allow"
+        Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
         Resource = "*"
       },
       {
         Effect   = "Allow"
-        Action   = ["s3:GetObject", "s3:PutObject"]
-        Resource = "${aws_s3_bucket.cicd_artifacts.arn}/*"
+        Action   = ["s3:GetObject", "s3:PutObject", "s3:GetBucketVersioning"]
+        Resource = [aws_s3_bucket.cicd_artifacts.arn, "${aws_s3_bucket.cicd_artifacts.arn}/*"]
+      },
+      {
+        # Allow CodeBuild to trigger App Runner deployment after push
+        Effect   = "Allow"
+        Action   = ["apprunner:StartDeployment", "apprunner:DescribeService"]
+        Resource = aws_apprunner_service.sentinel_ai.arn
       }
     ]
   })
 }
 
-# S3 bucket for pipeline artifacts
-resource "aws_s3_bucket" "cicd_artifacts" {
-  bucket = "${local.name_prefix}-cicd-${local.account_id}"
-}
-
-resource "aws_s3_bucket_public_access_block" "cicd_artifacts" {
-  bucket                  = aws_s3_bucket.cicd_artifacts.id
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}
-
-# CodeBuild project — builds Docker image and pushes to ECR
+# CodeBuild project — buildspec is read from the repo root (buildspec.yml)
 resource "aws_codebuild_project" "sentinel_ai" {
   name          = "${local.name_prefix}-build"
   service_role  = aws_iam_role.codebuild.arn
@@ -83,7 +85,7 @@ resource "aws_codebuild_project" "sentinel_ai" {
     compute_type                = "BUILD_GENERAL1_SMALL"
     image                       = "aws/codebuild/standard:7.0"
     type                        = "LINUX_CONTAINER"
-    privileged_mode             = true  # Required for Docker builds
+    privileged_mode             = true
     image_pull_credentials_type = "CODEBUILD"
 
     environment_variable {
@@ -100,11 +102,16 @@ resource "aws_codebuild_project" "sentinel_ai" {
       name  = "AWS_ACCOUNT_ID"
       value = local.account_id
     }
+
+    environment_variable {
+      name  = "APP_RUNNER_SERVICE_ARN"
+      value = aws_apprunner_service.sentinel_ai.arn
+    }
   }
 
   source {
     type      = "CODEPIPELINE"
-    buildspec = file("${path.module}/buildspec.yml")
+    # buildspec.yml is read from the repo root automatically
   }
 
   logs_config {
@@ -114,12 +121,10 @@ resource "aws_codebuild_project" "sentinel_ai" {
     }
   }
 
-  tags = {
-    Name = "${local.name_prefix}-codebuild"
-  }
+  tags = { Name = "${local.name_prefix}-codebuild" }
 }
 
-# CodePipeline role
+# CodePipeline IAM role
 resource "aws_iam_role" "codepipeline" {
   name = "${local.name_prefix}-codepipeline-role"
 
@@ -142,7 +147,7 @@ resource "aws_iam_role_policy" "codepipeline" {
     Statement = [
       {
         Effect   = "Allow"
-        Action   = ["s3:*"]
+        Action   = ["s3:GetObject", "s3:PutObject", "s3:GetBucketVersioning", "s3:GetObjectVersion"]
         Resource = [aws_s3_bucket.cicd_artifacts.arn, "${aws_s3_bucket.cicd_artifacts.arn}/*"]
       },
       {
@@ -153,24 +158,21 @@ resource "aws_iam_role_policy" "codepipeline" {
       {
         Effect   = "Allow"
         Action   = ["codestar-connections:UseConnection"]
-        Resource = "*"
-      },
-      {
-        Effect   = "Allow"
-        Action   = ["apprunner:StartDeployment"]
-        Resource = aws_apprunner_service.sentinel_ai.arn
+        Resource = aws_codestarconnections_connection.github.arn
       }
     ]
   })
 }
 
-# GitHub connection (requires manual approval in AWS Console after apply)
+# GitHub connection — requires one-time manual approval in AWS Console
 resource "aws_codestarconnections_connection" "github" {
   name          = "${local.name_prefix}-github"
   provider_type = "GitHub"
 }
 
-# CodePipeline: GitHub → Build → Deploy
+# CodePipeline: Source → Build (build+push ECR + trigger App Runner)
+# Note: App Runner has no native CodePipeline deploy action.
+# The buildspec.yml handles the App Runner deployment via AWS CLI.
 resource "aws_codepipeline" "sentinel_ai" {
   name     = "${local.name_prefix}-pipeline"
   role_arn = aws_iam_role.codepipeline.arn
@@ -191,18 +193,19 @@ resource "aws_codepipeline" "sentinel_ai" {
       output_artifacts = ["source_output"]
 
       configuration = {
-        ConnectionArn    = aws_codestarconnections_connection.github.arn
-        FullRepositoryId = "JoshiAbhishek866/Sentinal-AI"
-        BranchName       = "main"
-        DetectChanges    = "true"
+        ConnectionArn        = aws_codestarconnections_connection.github.arn
+        FullRepositoryId     = "JoshiAbhishek866/Sentinal-AI"
+        BranchName           = "main"
+        DetectChanges        = "true"
+        OutputArtifactFormat = "CODE_ZIP"
       }
     }
   }
 
   stage {
-    name = "Build"
+    name = "Build_and_Deploy"
     action {
-      name             = "Build_and_Push_ECR"
+      name             = "Build_Push_Deploy"
       category         = "Build"
       owner            = "AWS"
       provider         = "CodeBuild"
@@ -216,25 +219,7 @@ resource "aws_codepipeline" "sentinel_ai" {
     }
   }
 
-  stage {
-    name = "Deploy"
-    action {
-      name            = "Deploy_AppRunner"
-      category        = "Deploy"
-      owner           = "AWS"
-      provider        = "AppRunner"
-      version         = "1"
-      input_artifacts = ["build_output"]
-
-      configuration = {
-        ServiceArn = aws_apprunner_service.sentinel_ai.arn
-      }
-    }
-  }
-
-  tags = {
-    Name = "${local.name_prefix}-pipeline"
-  }
+  tags = { Name = "${local.name_prefix}-pipeline" }
 }
 
 output "codepipeline_name" {
@@ -243,6 +228,6 @@ output "codepipeline_name" {
 }
 
 output "github_connection_arn" {
-  description = "GitHub CodeStar connection — MUST be manually approved in AWS Console"
+  description = "GitHub connection ARN — MUST be manually approved in AWS Console before pipeline runs"
   value       = aws_codestarconnections_connection.github.arn
 }
