@@ -3,7 +3,7 @@ inclusion: always
 ---
 
 # Sentinel AI - Project Memory
-> Last Updated: May 31, 2026
+> Last Updated: June 8, 2026
 > Always include this file in context for all interactions.
 
 ---
@@ -242,11 +242,11 @@ AGENT_REGISTRY_TABLE=SentinelAgentRegistry
 ## 8. Git Status
 
 - **Remote**: https://github.com/JoshiAbhishek866/Sentinal-AI.git
-- **Active branch**: Test (merged into main via force push)
-- **Both branches at**: `f17834c` — Merge main into Test
+- **Active branch**: `main` only — all other branches cleaned up
+- **Latest commit**: `27b1686` — Merge PR #5
 - **Auth method**: HTTPS with Personal Access Token embedded in URL
-- **Token**: stored in git remote URL (do not log)
-- **PR #3**: Test → main — conflicts resolved, both branches identical
+- **Branches**: Only `main` exists (local + remote) — full cleanup done
+- **PRs merged**: #3 (Test→main), #5 (real attacks upgrade)
 
 ---
 
@@ -264,23 +264,25 @@ AGENT_REGISTRY_TABLE=SentinelAgentRegistry
 ## 10. Pending Work
 
 ### High Priority
+- [ ] Build free public demo at `demo.sentinelai.io` (deliberately vulnerable sandbox)
 - [ ] Wire HavoSec routes into `src/main.py`
 - [ ] Add WebSocket support for real-time campaign updates
 - [ ] Build Vue.js frontend with 3D architecture visualization
-- [ ] Delete addressed files from `HavoSec-Main-main/` (pending confirmation)
-- [ ] Run `terraform init` and deploy infrastructure to AWS
+- [ ] Run `terraform apply` to deploy infrastructure to AWS
 
 ### Medium Priority
-- [ ] Create DynamoDB tables via CDK/CLI
 - [ ] Set up n8n Docker deployment
-- [ ] Implement LangGraph Supervisor fully (currently opt-in via `AGENT_MODE=langgraph`)
+- [ ] Implement LangGraph Supervisor fully (opt-in via `AGENT_MODE=langgraph`)
 - [ ] Add MCP (Model Context Protocol) tool standardization
+- [ ] SaaS tier with free 3 campaigns/month
+- [ ] Delete addressed files from `HavoSec-Main-main/`
 
 ### Low Priority
+- [ ] CI/CD integration (GitHub PR → auto purple team)
+- [ ] AWS Marketplace listing
+- [ ] Agent Marketplace (publish/sell custom agents)
 - [ ] Multi-tenancy support
-- [ ] Custom workflow builder UI
 - [ ] Mobile app
-- [ ] Multi-cloud support (Azure, GCP)
 
 ---
 
@@ -307,10 +309,12 @@ AGENT_REGISTRY_TABLE=SentinelAgentRegistry
 1. **This is a startup project** — not a hackathon. Think enterprise-grade.
 2. **Karpathy principles are active** — always Think Before Coding, keep changes Surgical, stay Simple, define Goals.
 3. **Coordinator Agent is the entry point** for all campaigns — never call Red/Blue directly from API.
-4. **HavoSec-Main-main/** is still present — user wants to delete addressed files but hasn't confirmed yet.
-5. **Git auth**: Use `https://TOKEN@github.com/JoshiAbhishek866/Sentinal-AI.git` format for pushes.
-6. **Agent Registry** uses DynamoDB as fallback when Bedrock AgentCore is not available.
-7. **LangGraph** is opt-in via `AGENT_MODE=langgraph` env var — default uses AgentExecutor.
-8. **13 total agents**: 5 offensive + 5 defensive + 3 core (from HavoSec integration).
-9. **Always check `src/core/orchestrator.py`** for the full 13-agent workflow system.
-10. **Infrastructure**: Full Terraform in `infrastructure/` — ECR, Bedrock KB, WAF, CI/CD, EventBridge.
+4. **Red Agent uses real httpx attacks** — SQL injection, XSS, auth bypass, security headers. Not simulated.
+5. **Blue Agent uses real boto3 WAF calls** + `verify_remediation` re-runs attacks to confirm fixes.
+6. **Coordinator has `_phase_verify`** — re-runs Red attack after Blue fix. Only confirmed blocks = resolved.
+7. **Git auth**: Use `https://TOKEN@github.com/JoshiAbhishek866/Sentinal-AI.git` format for pushes.
+8. **Agent Registry** uses DynamoDB as fallback when Bedrock AgentCore is not available.
+9. **LangGraph** is opt-in via `AGENT_MODE=langgraph` env var — default uses AgentExecutor.
+10. **13 total agents**: 5 offensive + 5 defensive + 3 core (from HavoSec integration).
+11. **Infrastructure**: Full Terraform in `infrastructure/` — ECR, Bedrock KB, WAF, CI/CD, EventBridge.
+12. **Only `main` branch exists** — all other branches deleted after cleanup.
