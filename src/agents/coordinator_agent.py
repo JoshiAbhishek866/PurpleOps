@@ -26,6 +26,7 @@ State Machine Flow:
 """
 
 import asyncio
+import httpx
 import logging
 from typing import Dict, List, Optional, Any, Literal
 from datetime import datetime
@@ -269,7 +270,8 @@ class CoordinatorAgent:
             target_info = {
                 "url": state.target,
                 "description": f"Purple team campaign {state.campaign_id}",
-                "iam_role": "red-agent-role",
+                "session_id": state.campaign_id,  # Fixed: pass campaign_id as session_id
+                "campaign_id": state.campaign_id,
                 "turn": state.attack_turns_used,
                 "previous_findings": state.vulnerabilities_found,
             }
@@ -280,19 +282,21 @@ class CoordinatorAgent:
                 None, red.execute_campaign, target_info
             )
 
-            # Extract findings from result
-            findings = self._extract_findings(result, "RED")
+            # Extract findings — deduplicate against already-known vulnerability types
+            existing_types = {f.get("type") for f in state.vulnerabilities_found}
+            all_findings = self._extract_findings(result, "RED")
+            new_findings = [f for f in all_findings if f.get("type") not in existing_types]
             state.red_results.append(result)
-            state.vulnerabilities_found.extend(findings)
+            state.vulnerabilities_found.extend(new_findings)
 
             state.log_event(
                 "RED_AGENT",
                 f"attack_turn_{state.attack_turns_used}",
-                f"Found {len(findings)} vulnerabilities"
+                f"Found {len(new_findings)} new vulnerabilities"
             )
 
             decision = (
-                f"Turn {state.current_turn}: Red Agent found {len(findings)} vulnerabilities. "
+                f"Turn {state.current_turn}: Red Agent found {len(new_findings)} new vulnerabilities. "
                 f"Total findings: {len(state.vulnerabilities_found)}"
             )
             state.coordinator_decisions.append(decision)
@@ -328,6 +332,7 @@ class CoordinatorAgent:
                 "target": state.target,
                 "details": str(unresolved[:3]),  # Pass top 3 to control token usage
                 "campaign_id": state.campaign_id,
+                "session_id": state.campaign_id,  # Fixed: explicit session_id
                 "turn": state.defense_turns_used,
             }
 
@@ -371,7 +376,6 @@ class CoordinatorAgent:
         logger.info(f"[COORDINATOR] 🔬 Verifying remediations on turn {state.current_turn}")
 
         try:
-            import httpx
             verified_count = 0
             still_vulnerable = []
 
@@ -430,7 +434,8 @@ class CoordinatorAgent:
 
         return state
 
-    async def _phase_evaluate(self, state: CampaignState) -> CampaignState:        """Coordinator evaluates campaign progress and decides next action."""
+    async def _phase_evaluate(self, state: CampaignState) -> CampaignState:
+        """Coordinator evaluates campaign progress and decides next action."""
         state.phase = CampaignPhase.EVALUATING
 
         unresolved_count = len(state.vulnerabilities_found) - len(state.remediations_applied)
@@ -522,24 +527,79 @@ class CoordinatorAgent:
     # ── Helper Methods ───────────────────────────────────────────────────────
 
     def _extract_findings(self, result: Dict, agent_type: str) -> List[Dict]:
-        """Extract structured findings from agent result."""
+        """
+        Extract structured findings from Red Agent result.
+        Uses tool_results (structured dicts) first, falls back to LLM output parsing.
+        Deduplicates by attack_type to prevent repeated findings across turns.
+        """
         findings = []
-        output = result.get("output", "")
+        seen_types = {f.get("type") for f in self._get_existing_finding_types()}
 
-        # Parse common attack types from output
-        attack_types = ["SQL Injection", "XSS", "Privilege Escalation", "SSRF", "RCE"]
-        for attack in attack_types:
-            if attack.lower() in str(output).lower():
-                findings.append({
-                    "id": f"{agent_type}_{attack.replace(' ', '_')}_{datetime.utcnow().timestamp()}",
-                    "type": attack,
-                    "severity": "HIGH",
-                    "source_agent": agent_type,
-                    "raw_output": str(output)[:500],
-                    "timestamp": datetime.utcnow().isoformat()
-                })
+        # Primary: use structured tool results attached by RedAgent.execute_campaign
+        tool_results = result.get("tool_results", [])
+        for tool_result in tool_results:
+            if not isinstance(tool_result, dict):
+                continue
+            if not tool_result.get("vulnerable", False):
+                continue
+
+            attack_type = tool_result.get("attack_type", "Unknown")
+            if attack_type in seen_types:
+                continue  # Already found this type — skip duplicate
+
+            severity_map = {
+                "Authentication Bypass": "CRITICAL",
+                "SQL Injection": "HIGH",
+                "XSS": "HIGH",
+                "Security Headers": "MEDIUM",
+            }
+
+            finding = {
+                "id": f"{agent_type}_{attack_type.replace(' ', '_')}_{datetime.utcnow().timestamp()}",
+                "type": attack_type,
+                "severity": severity_map.get(attack_type, "MEDIUM"),
+                "source_agent": agent_type,
+                "target": tool_result.get("target", ""),
+                "findings": tool_result.get("findings", []),
+                "verified": False,
+                "timestamp": datetime.utcnow().isoformat(),
+            }
+            findings.append(finding)
+            seen_types.add(attack_type)
+
+        # Fallback: parse LLM output text if no structured results
+        if not findings:
+            output = str(result.get("output", ""))
+            attack_map = {
+                "SQL Injection": "HIGH",
+                "XSS": "HIGH",
+                "Authentication Bypass": "CRITICAL",
+                "Security Headers": "MEDIUM",
+            }
+            for attack_type, severity in attack_map.items():
+                if (
+                    attack_type.lower() in output.lower()
+                    and "vulnerable" in output.lower()
+                    and attack_type not in seen_types
+                ):
+                    findings.append({
+                        "id": f"{agent_type}_{attack_type.replace(' ', '_')}_{datetime.utcnow().timestamp()}",
+                        "type": attack_type,
+                        "severity": severity,
+                        "source_agent": agent_type,
+                        "raw_output": output[:500],
+                        "verified": False,
+                        "timestamp": datetime.utcnow().isoformat(),
+                    })
+                    seen_types.add(attack_type)
 
         return findings
+
+    def _get_existing_finding_types(self) -> List[Dict]:
+        """Helper: return current vulnerabilities_found if state is accessible."""
+        # This is called during extraction — state is not directly accessible here,
+        # so coordinator passes findings via _phase_attack context.
+        return []  # Deduplication is handled in _phase_attack via seen_types
 
     def _extract_remediations(self, result: Dict) -> List[Dict]:
         """Extract structured remediations from Blue Agent result."""
