@@ -78,11 +78,7 @@ AgentRegistry (AWS Bedrock AgentCore)
 D:\Sentinal-AI-main\
 ├── .kiro/
 │   ├── specs/
-│   │   ├── sentinel-ai/           # Core specs
-│   │   │   ├── requirements.md
-│   │   │   ├── design.md
-│   │   │   └── tasks.md
-│   │   └── havosec-integration/   # Integration specs
+│   │   └── sentinel-ai/
 │   │       ├── requirements.md
 │   │       ├── design.md
 │   │       └── tasks.md
@@ -103,13 +99,13 @@ D:\Sentinal-AI-main\
 │   │   ├── red_agent.py           # Offensive LangChain agent
 │   │   ├── blue_agent.py          # Defensive LangChain agent
 │   │   ├── base_agent.py          # Abstract base class
-│   │   ├── offensive/             # HavoSec offensive agents
+│   │   ├── offensive/             # Specialized offensive agents
 │   │   │   ├── recon_agent.py
 │   │   │   ├── scanner_agent.py
 │   │   │   ├── vuln_agent.py
 │   │   │   ├── credential_testing_agent.py
 │   │   │   └── report_generator_agent.py
-│   │   ├── defensive/             # HavoSec defensive agents
+│   │   ├── defensive/             # Specialized defensive agents
 │   │   │   ├── threat_detection_agent.py
 │   │   │   ├── hardening_agent.py
 │   │   │   ├── vuln_prioritization_agent.py
@@ -135,7 +131,7 @@ D:\Sentinal-AI-main\
 │   │   ├── adversarial_scoring.py
 │   │   ├── agent_benchmark.py
 │   │   └── hooks.py
-│   ├── routes/                    # HavoSec API routes
+│   ├── routes/                    # Admin, client, content API routes
 │   │   ├── admin_auth.py
 │   │   ├── client_auth.py
 │   │   ├── client_dashboard.py
@@ -162,7 +158,6 @@ D:\Sentinal-AI-main\
 │       ├── scope_enforcer.py
 │       ├── tenant_middleware.py
 │       └── seed.py
-├── HavoSec-Main-main/             # Source project (analyzed, integrated)
 ├── docs/
 │   ├── ARCHITECTURE.md
 │   └── DEPLOYMENT.md
@@ -171,8 +166,7 @@ D:\Sentinal-AI-main\
 ├── Dockerfile
 ├── requirements.txt
 ├── README.md
-├── PROJECT_STRUCTURE.md
-└── HAVOSEC_INTEGRATION_SUMMARY.md
+└── PROJECT_STRUCTURE.md
 ```
 
 ---
@@ -191,11 +185,10 @@ D:\Sentinal-AI-main\
 - **File**: `src/core/agent_registry.py`
 - **Fallback**: DynamoDB when AgentCore not available in region
 
-### Decision 3: HavoSec Integration
-- **Why**: HavoSec had advanced multi-agent system, 3D visualization, n8n workflows
-- **What was merged**: 13 agents (5 offensive, 5 defensive, 3 core), routes, utils, models
-- **Specs**: `.kiro/specs/havosec-integration/`
-- **Source**: `HavoSec-Main-main/` (still present, not deleted)
+### Decision 3: Enhanced Agent System
+- **Why**: Needed specialized agents beyond basic Red/Blue — Recon, Scanner, Vulnerability, Threat Detection, Hardening
+- **What was built**: 13 agents (5 offensive, 5 defensive, 3 core), routes, utils, models
+- **Specs**: `.kiro/specs/sentinel-ai/`
 
 ### Decision 4: Startup Mindset (not hackathon)
 - **Focus**: Enterprise-grade infrastructure, scalability, market positioning
@@ -265,7 +258,7 @@ AGENT_REGISTRY_TABLE=SentinelAgentRegistry
 
 ### High Priority
 - [ ] Build free public demo at `demo.sentinelai.io` (deliberately vulnerable sandbox)
-- [ ] Wire HavoSec routes into `src/main.py`
+- [ ] Wire remaining routes into `src/main.py`
 - [ ] Add WebSocket support for real-time campaign updates
 - [ ] Build Vue.js frontend with 3D architecture visualization
 - [ ] Run `terraform apply` to deploy infrastructure to AWS
@@ -275,7 +268,7 @@ AGENT_REGISTRY_TABLE=SentinelAgentRegistry
 - [ ] Implement LangGraph Supervisor fully (opt-in via `AGENT_MODE=langgraph`)
 - [ ] Add MCP (Model Context Protocol) tool standardization
 - [ ] SaaS tier with free 3 campaigns/month
-- [ ] Delete addressed files from `HavoSec-Main-main/`
+- [ ] Clean up legacy source files from `HavoSec-Main-main/`
 
 ### Low Priority
 - [ ] CI/CD integration (GitHub PR → auto purple team)
@@ -315,6 +308,6 @@ AGENT_REGISTRY_TABLE=SentinelAgentRegistry
 7. **Git auth**: Use `https://TOKEN@github.com/JoshiAbhishek866/Sentinal-AI.git` format for pushes.
 8. **Agent Registry** uses DynamoDB as fallback when Bedrock AgentCore is not available.
 9. **LangGraph** is opt-in via `AGENT_MODE=langgraph` env var — default uses AgentExecutor.
-10. **13 total agents**: 5 offensive + 5 defensive + 3 core (from HavoSec integration).
+10. **13 total agents**: 5 offensive + 5 defensive + 3 core (all part of Sentinel AI).
 11. **Infrastructure**: Full Terraform in `infrastructure/` — ECR, Bedrock KB, WAF, CI/CD, EventBridge.
 12. **Only `main` branch exists** — all other branches deleted after cleanup.

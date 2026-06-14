@@ -94,7 +94,7 @@ desktop.ini
 htmlcov/
 coverage.xml
 
-# ── HavoSec Source (large, already analyzed & integrated) ────
+# ── Legacy source folder ─────────────────────────────────────────
 HavoSec-Main-main/admin/public/
 HavoSec-Main-main/frontend/public/
 HavoSec-Main-main/content/pdfs/
