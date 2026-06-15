@@ -10,7 +10,7 @@ Fail-graceful: stores in MongoDB, falls back to in-memory if DB unavailable.
 
 import logging
 from typing import Dict, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from collections import defaultdict
 
 logger = logging.getLogger(__name__)
@@ -85,7 +85,7 @@ class AdversarialScoring:
             "target": target,
             "red": {"old_rating": round(old_red), "new_rating": round(new_red), "score": red_score},
             "blue": {"old_rating": round(old_blue), "new_rating": round(new_blue), "score": blue_score},
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
         self._history.append(result)
@@ -243,7 +243,7 @@ class AdversarialScoring:
             for key, rating in self._ratings.items():
                 await self.db.agent_ratings.update_one(
                     {"agent_key": key},
-                    {"$set": {"rating": rating, "updated_at": datetime.utcnow().isoformat()}},
+                    {"$set": {"rating": rating, "updated_at": datetime.now(timezone.utc).isoformat()}},
                     upsert=True,
                 )
             if self._history:

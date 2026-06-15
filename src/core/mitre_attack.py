@@ -8,7 +8,7 @@ Reference: https://attack.mitre.org/techniques/enterprise/
 """
 
 from typing import Dict, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 
 logger = logging.getLogger(__name__)
@@ -215,7 +215,7 @@ class MitreAttackMapper:
         techniques = self.get_techniques_for_action(action)
         finding["mitre_attack"] = {
             "techniques": techniques,
-            "mapped_at": datetime.utcnow().isoformat(),
+            "mapped_at": datetime.now(timezone.utc).isoformat(),
         }
         return finding
 

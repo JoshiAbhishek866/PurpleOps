@@ -11,7 +11,7 @@ Cost-optimized: uses local Docker containers for vulnerable apps.
 import logging
 import time
 from typing import Dict, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +79,7 @@ class BenchmarkResult:
 
     def add_finding(self, vuln_type: str, location: str, is_true_positive: bool = True):
         """Record a vulnerability finding."""
-        entry = {"type": vuln_type, "location": location, "timestamp": datetime.utcnow().isoformat()}
+        entry = {"type": vuln_type, "location": location, "timestamp": datetime.now(timezone.utc).isoformat()}
         if is_true_positive:
             self.found_vulns.append(entry)
         else:
@@ -91,7 +91,7 @@ class BenchmarkResult:
             "action": action,
             "target_vuln": target_vuln,
             "effective": effective,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         })
 
     def finalize(self):
@@ -123,7 +123,7 @@ class BenchmarkResult:
             "defenses_applied": total_defenses,
             "defenses_effective": effective_defenses,
             "time_seconds": round(elapsed, 2),
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
 

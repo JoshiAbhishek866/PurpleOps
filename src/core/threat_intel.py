@@ -15,7 +15,7 @@ import json
 import time
 import logging
 from typing import Dict, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -205,7 +205,7 @@ class ThreatIntelFetcher:
                 "count": len(c2),
                 "active_malware": list(set(e.get("malware", "") for e in c2))[:5],
             },
-            "last_updated": datetime.utcnow().isoformat(),
+            "last_updated": datetime.now(timezone.utc).isoformat(),
         }
 
     async def enrich_finding_with_intel(self, finding: Dict) -> Dict:
@@ -226,13 +226,13 @@ class ThreatIntelFetcher:
             finding["threat_intel"] = {
                 "cisa_kev_matches": matched_kevs,
                 "risk_level": "CRITICAL — actively exploited in the wild",
-                "enriched_at": datetime.utcnow().isoformat(),
+                "enriched_at": datetime.now(timezone.utc).isoformat(),
             }
         else:
             finding["threat_intel"] = {
                 "cisa_kev_matches": [],
                 "risk_level": "standard",
-                "enriched_at": datetime.utcnow().isoformat(),
+                "enriched_at": datetime.now(timezone.utc).isoformat(),
             }
 
         return finding

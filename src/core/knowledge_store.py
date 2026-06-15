@@ -11,7 +11,7 @@ Fail-graceful: all methods return empty results if ChromaDB is unavailable.
 import logging
 import hashlib
 from typing import Dict, List, Optional, Any
-from datetime import datetime
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +81,7 @@ class KnowledgeStore:
 
         doc_id = finding_id or self._make_id(finding_text)
         meta = metadata or {}
-        meta["stored_at"] = datetime.utcnow().isoformat()
+        meta["stored_at"] = datetime.now(timezone.utc).isoformat()
 
         # Ensure all metadata values are strings (ChromaDB requirement)
         clean_meta = {k: str(v) for k, v in meta.items() if v is not None}

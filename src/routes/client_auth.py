@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Request
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 import bcrypt
 # import jwt
 from jose import jwt, ExpiredSignatureError, JWTError
@@ -14,7 +14,7 @@ JWT_SECRET = Config.JWT_SECRET
 def create_token(user_id: str):
     payload = {
         "userId": user_id,
-        "exp": datetime.utcnow() + timedelta(days=7)
+        "exp": datetime.now(timezone.utc) + timedelta(days=7)
     }
     return jwt.encode(payload, JWT_SECRET, algorithm="HS256")
 
@@ -60,7 +60,7 @@ async def register(request: Request):
         "isActive": True,
         "emailVerified": False,
         "loginAttempts": 0,
-        "createdAt": datetime.utcnow()
+        "createdAt": datetime.now(timezone.utc)
     }
     
     result = await db.users.insert_one(user_doc)
@@ -71,8 +71,8 @@ async def register(request: Request):
     await db.email_verifications.insert_one({
         "email": email.lower(),
         "token": verification_token,
-        "expiresAt": datetime.utcnow() + timedelta(hours=24),
-        "createdAt": datetime.utcnow()
+        "expiresAt": datetime.now(timezone.utc) + timedelta(hours=24),
+        "createdAt": datetime.now(timezone.utc)
     })
     
     # Create welcome notification
@@ -82,7 +82,7 @@ async def register(request: Request):
         "title": "Welcome to Sentinel AI!",
         "message": "Your account has been created. Please verify your email to access all features.",
         "read": False,
-        "createdAt": datetime.utcnow()
+        "createdAt": datetime.now(timezone.utc)
     })
     
     token = create_token(user_id)
@@ -117,7 +117,7 @@ async def login(request: Request):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     # Check if locked
-    if user.get("lockUntil") and user["lockUntil"] > datetime.utcnow():
+    if user.get("lockUntil") and user["lockUntil"] > datetime.now(timezone.utc):
         raise HTTPException(status_code=423, detail="Account temporarily locked")
     
     if not user.get("isActive", True):
@@ -128,7 +128,7 @@ async def login(request: Request):
         attempts = user.get("loginAttempts", 0) + 1
         update = {"loginAttempts": attempts}
         if attempts >= 5:
-            update["lockUntil"] = datetime.utcnow() + timedelta(hours=2)
+            update["lockUntil"] = datetime.now(timezone.utc) + timedelta(hours=2)
         await db.users.update_one({"_id": user["_id"]}, {"$set": update})
         
         # Create failed login notification
@@ -136,9 +136,9 @@ async def login(request: Request):
             "userId": str(user["_id"]),
             "type": "warning",
             "title": "Failed Login Attempt",
-            "message": f"Failed login attempt detected at {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC",
+            "message": f"Failed login attempt detected at {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')} UTC",
             "read": False,
-            "createdAt": datetime.utcnow()
+            "createdAt": datetime.now(timezone.utc)
         })
         
         raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -146,7 +146,7 @@ async def login(request: Request):
     # Reset login attempts
     await db.users.update_one(
         {"_id": user["_id"]},
-        {"$set": {"loginAttempts": 0, "lastLogin": datetime.utcnow()}, "$unset": {"lockUntil": ""}}
+        {"$set": {"loginAttempts": 0, "lastLogin": datetime.now(timezone.utc)}, "$unset": {"lockUntil": ""}}
     )
     
     user_id = str(user["_id"])
@@ -157,9 +157,9 @@ async def login(request: Request):
         "userId": user_id,
         "type": "info",
         "title": "New Login",
-        "message": f"Successful login at {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC",
+        "message": f"Successful login at {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')} UTC",
         "read": False,
-        "createdAt": datetime.utcnow()
+        "createdAt": datetime.now(timezone.utc)
     })
     
     return {

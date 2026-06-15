@@ -6,7 +6,7 @@ Generates software architecture diagrams from scan results
 from fastapi import APIRouter, HTTPException, Depends, status
 from typing import List, Dict, Optional
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 from dotenv import load_dotenv
 from pymongo import MongoClient
@@ -319,7 +319,7 @@ async def get_architecture_by_execution(execution_id: str):
     return ArchitectureResponse(
         executionId=execution_id,
         target=execution.get("target", "Unknown"),
-        createdAt=execution.get("created_at", datetime.utcnow()),
+        createdAt=execution.get("created_at", datetime.now(timezone.utc)),
         architecture=architecture,
         totalComponents=len(architecture.nodes),
         totalConnections=len(architecture.connections),

@@ -9,7 +9,7 @@ and scan results per target across multiple campaigns.
 
 import boto3
 from typing import Dict, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 import json
 import logging
@@ -65,14 +65,14 @@ class CampaignMemoryManager:
 
             item = {
                 "target": target,
-                "sort_key": f"{agent_type}#{datetime.utcnow().isoformat()}",
+                "sort_key": f"{agent_type}#{datetime.now(timezone.utc).isoformat()}",
                 "agent_type": agent_type,
                 "campaign_id": campaign_id,
                 "actor_id": actor_id,
                 "session_id": session_id or campaign_id,
                 "finding": sanitised,
-                "created_at": datetime.utcnow().isoformat(),
-                "ttl": int(datetime.utcnow().timestamp()) + 90 * 86400,  # 90-day retention
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "ttl": int(datetime.now(timezone.utc).timestamp()) + 90 * 86400,  # 90-day retention
             }
 
             self.table.put_item(Item=item)

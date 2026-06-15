@@ -13,7 +13,7 @@ Fail-graceful: falls back to basic execution if langgraph is not installed.
 import os
 import logging
 from typing import Dict, List, Optional, Any, TypedDict, Annotated
-from datetime import datetime
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -143,7 +143,7 @@ class LangGraphSecurityAgent:
             "step": step_idx + 1,
             "action": current_step,
             "result": f"Completed: {current_step}",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "status": "success",
         }
 
@@ -187,7 +187,7 @@ class LangGraphSecurityAgent:
             "observations": state["observations"],
             "reflections": state["reflections"],
             "iterations": state["iteration"],
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
         logger.info(f"[{self.agent_type.upper()}] Finalized: {state['current_step']} steps completed")
         return state
@@ -240,5 +240,5 @@ class LangGraphSecurityAgent:
             "target": target,
             "mode": "basic (LangGraph disabled or unavailable)",
             "steps_completed": 0,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }

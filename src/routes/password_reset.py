@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Request
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 import secrets
 import bcrypt
 
@@ -29,7 +29,7 @@ async def forgot_password(request: Request):
     
     # Generate reset token
     reset_token = generate_token()
-    expires_at = datetime.utcnow() + PASSWORD_RESET_EXPIRY
+    expires_at = datetime.now(timezone.utc) + PASSWORD_RESET_EXPIRY
     
     # Store token in database
     await db.password_resets.delete_many({"email": email})  # Remove old tokens
@@ -37,7 +37,7 @@ async def forgot_password(request: Request):
         "email": email,
         "token": reset_token,
         "expiresAt": expires_at,
-        "createdAt": datetime.utcnow()
+        "createdAt": datetime.now(timezone.utc)
     })
     
     # In production, send email here
@@ -66,7 +66,7 @@ async def verify_reset_token(request: Request):
     if not reset_record:
         raise HTTPException(status_code=400, detail="Invalid or expired token")
     
-    if reset_record["expiresAt"] < datetime.utcnow():
+    if reset_record["expiresAt"] < datetime.now(timezone.utc):
         await db.password_resets.delete_one({"token": token})
         raise HTTPException(status_code=400, detail="Token has expired")
     
@@ -91,7 +91,7 @@ async def reset_password(request: Request):
     if not reset_record:
         raise HTTPException(status_code=400, detail="Invalid or expired token")
     
-    if reset_record["expiresAt"] < datetime.utcnow():
+    if reset_record["expiresAt"] < datetime.now(timezone.utc):
         await db.password_resets.delete_one({"token": token})
         raise HTTPException(status_code=400, detail="Token has expired")
     
@@ -101,7 +101,7 @@ async def reset_password(request: Request):
     # Update user password
     result = await db.users.update_one(
         {"email": reset_record["email"]},
-        {"$set": {"password": hashed_password, "updatedAt": datetime.utcnow()}}
+        {"$set": {"password": hashed_password, "updatedAt": datetime.now(timezone.utc)}}
     )
     
     if result.modified_count == 0:
@@ -131,7 +131,7 @@ async def send_verification_email(request: Request):
     
     # Generate verification token
     verification_token = generate_token()
-    expires_at = datetime.utcnow() + EMAIL_VERIFICATION_EXPIRY
+    expires_at = datetime.now(timezone.utc) + EMAIL_VERIFICATION_EXPIRY
     
     # Store token
     await db.email_verifications.delete_many({"email": email})
@@ -139,7 +139,7 @@ async def send_verification_email(request: Request):
         "email": email,
         "token": verification_token,
         "expiresAt": expires_at,
-        "createdAt": datetime.utcnow()
+        "createdAt": datetime.now(timezone.utc)
     })
     
     verification_link = f"/auth/verify-email?token={verification_token}"
@@ -166,14 +166,14 @@ async def verify_email(request: Request):
     if not verification_record:
         raise HTTPException(status_code=400, detail="Invalid or expired verification link")
     
-    if verification_record["expiresAt"] < datetime.utcnow():
+    if verification_record["expiresAt"] < datetime.now(timezone.utc):
         await db.email_verifications.delete_one({"token": token})
         raise HTTPException(status_code=400, detail="Verification link has expired")
     
     # Update user as verified
     result = await db.users.update_one(
         {"email": verification_record["email"]},
-        {"$set": {"emailVerified": True, "emailVerifiedAt": datetime.utcnow()}}
+        {"$set": {"emailVerified": True, "emailVerifiedAt": datetime.now(timezone.utc)}}
     )
     
     if result.modified_count == 0:

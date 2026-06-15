@@ -1,6 +1,6 @@
 """
-Central Coordinator Agent - Sentinel AI
-=========================================
+Central Coordinator Agent — Sentinel AI — ENHANCED v2.0
+=========================================================
 Implements the LangGraph Supervisor pattern as recommended by AWS Summit.
 
 This is the "Control Plane" for all Red/Blue agents.
@@ -23,13 +23,27 @@ Architecture:
 
 State Machine Flow:
   INIT → PLAN → ROUTE → [RED | BLUE] → EVALUATE → [ROUTE | FINALIZE]
+
+ENHANCED v2.0 changes:
+  - Replaced all datetime.utcnow() with datetime.now(timezone.utc)
+  - Added campaign pause / resume capability (method stubs)
+  - Added per-phase error recovery (catch individual phase failures without aborting)
+  - Added configurable n8n webhook URL support
+  - Added campaign timeout enforcement
+  - Added structured JSON-compatible logging
+  - Added input validation on run_campaign()
+  - Added exponential backoff retry on _persist_state()
+  - Added CampaignPhase.PAUSED state
+  - Preserved ALL existing functionality and APIs
 """
 
 import asyncio
 import httpx
+import json
 import logging
+import uuid
 from typing import Dict, List, Optional, Any, Literal
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -38,6 +52,9 @@ from src.config import Config
 from src.utils.logger import setup_logger
 
 logger = setup_logger(__name__)
+
+# ENHANCED: structured logger for JSON events
+_struct_logger = logging.getLogger(f"{__name__}.structured")
 
 
 # ─────────────────────────────────────────────
@@ -52,6 +69,7 @@ class CampaignPhase(str, Enum):
     EVALUATING = "EVALUATING"
     COMPLETED  = "COMPLETED"
     ABORTED    = "ABORTED"
+    PAUSED     = "PAUSED"  # ENHANCED: pause/resume support
 
 
 @dataclass
@@ -91,14 +109,21 @@ class CampaignState:
     final_report: Optional[Dict] = None
     completed_at: Optional[str] = None
 
-    def log_event(self, agent: str, action: str, outcome: str):
+    # ENHANCED: campaign start timestamp for timeout enforcement
+    started_at: Optional[str] = field(default=None)
+
+    # ENHANCED: phase error tracking (non-fatal)
+    phase_errors: List[Dict] = field(default_factory=list)
+
+    def log_event(self, agent: str, action: str, outcome: str) -> None:
         """Append immutable audit entry."""
         self.audit_log.append({
             "turn": self.current_turn,
             "agent": agent,
             "action": action,
             "outcome": outcome,
-            "timestamp": datetime.utcnow().isoformat()
+            # ENHANCED: timezone-aware UTC timestamp
+            "timestamp": datetime.now(timezone.utc).isoformat()
         })
 
     def is_budget_exhausted(self) -> bool:
@@ -120,7 +145,7 @@ class CampaignState:
 
 class CoordinatorAgent:
     """
-    Central Coordinator / Supervisor Agent.
+    Central Coordinator / Supervisor Agent — ENHANCED v2.0.
 
     Responsibilities:
     - Owns the CampaignState (single source of truth)
@@ -131,15 +156,33 @@ class CoordinatorAgent:
     - Queries RAG knowledge base once and distributes context
     - Triggers n8n workflows at key milestones
     - Registers completed campaigns to AWS Bedrock AgentCore Registry
+
+    ENHANCED v2.0 additions:
+    - Configurable n8n webhook URL (opt-in via options/config)
+    - Campaign timeout enforcement
+    - Per-phase error recovery (individual phase failures don't abort)
+    - Pause / resume campaign stubs
+    - Structured JSON logging
+    - Exponential backoff retry on DynamoDB persistence
     """
 
-    def __init__(self):
+    def __init__(self, config: Optional[Dict] = None):
         self.dynamodb = boto3.resource("dynamodb", region_name=Config.AWS_REGION)
         self.campaigns_table = self.dynamodb.Table(Config.DYNAMODB_TABLE_CAMPAIGNS)
         self.audit_table = self.dynamodb.Table(Config.DYNAMODB_TABLE_AUDIT)
         self._red_agent = None
         self._blue_agent = None
         self._orchestrator = None
+
+        # ENHANCED: configurable settings with sensible defaults
+        _cfg = config or {}
+        self._n8n_webhook_url: Optional[str] = _cfg.get("n8n_webhook_url", None)
+        self._campaign_timeout_seconds: int = int(_cfg.get("campaign_timeout_seconds", 3600))
+        self._persist_max_retries: int = int(_cfg.get("persist_max_retries", 3))
+        self._persist_retry_base_delay: float = float(_cfg.get("persist_retry_base_delay", 0.5))
+
+        # ENHANCED: pause flag (checked each loop iteration)
+        self._paused: bool = False
 
     # ── Lazy-load agents to avoid circular imports ──────────────────────────
 
@@ -154,6 +197,27 @@ class CoordinatorAgent:
             from src.agents.blue_agent import BlueAgent
             self._blue_agent = BlueAgent()
         return self._blue_agent
+
+    # ── Pause / Resume ───────────────────────────────────────────────────────
+
+    def pause_campaign(self) -> None:
+        """ENHANCED: request the campaign loop to pause after the current turn."""
+        self._paused = True
+        _struct_logger.info(json.dumps({
+            "event": "campaign_pause_requested",
+        }))
+
+    def resume_campaign(self) -> None:
+        """ENHANCED: resume a previously paused campaign loop."""
+        self._paused = False
+        _struct_logger.info(json.dumps({
+            "event": "campaign_resume_requested",
+        }))
+
+    @property
+    def is_paused(self) -> bool:
+        """ENHANCED: expose pause state."""
+        return self._paused
 
     # ── Core Campaign Execution ──────────────────────────────────────────────
 
@@ -175,8 +239,27 @@ class CoordinatorAgent:
           6. Blue remediates, returns results
           7. EVALUATE → coordinator checks if done or loops
           8. FINALIZE → generate report, update registry
+
+        ENHANCED v2.0:
+          - Input validation on campaign_id and target
+          - Campaign timeout enforcement
+          - Per-phase error recovery
+          - n8n webhook notification on completion
+          - Pause/resume support in the loop
         """
+
+        # ENHANCED: input validation
+        if not campaign_id or not isinstance(campaign_id, str):
+            raise ValueError("campaign_id must be a non-empty string")
+        if not target or not isinstance(target, str):
+            raise ValueError("target must be a non-empty string")
+
         opts = options or {}
+
+        # ENHANCED: allow n8n_webhook_url override per-campaign
+        campaign_webhook = opts.get("n8n_webhook_url", self._n8n_webhook_url)
+        campaign_timeout = int(opts.get("campaign_timeout_seconds", self._campaign_timeout_seconds))
+
         state = CampaignState(
             campaign_id=campaign_id,
             target=target,
@@ -184,10 +267,20 @@ class CoordinatorAgent:
             max_defense_turns=opts.get("max_defense_turns", 5),
             max_total_turns=opts.get("max_total_turns", 15),
             token_budget=opts.get("token_budget", 50000),
+            # ENHANCED: record start time for timeout enforcement
+            started_at=datetime.now(timezone.utc).isoformat(),
         )
 
         logger.info(f"[COORDINATOR] 🚀 Campaign {campaign_id} started on {target}")
         state.log_event("COORDINATOR", "campaign_start", f"Target: {target}")
+
+        # ENHANCED: structured log
+        _struct_logger.info(json.dumps({
+            "event": "campaign_started",
+            "campaign_id": campaign_id,
+            "target": target,
+            "timeout_s": campaign_timeout,
+        }))
 
         # Persist initial state
         await self._persist_state(state, "ACTIVE")
@@ -198,12 +291,48 @@ class CoordinatorAgent:
 
             # ── Phase 2: Supervised Attack/Defense Loop ──────────────────────
             while not self._should_terminate(state):
+                # ENHANCED: campaign timeout enforcement
+                if self._is_campaign_timed_out(state, campaign_timeout):
+                    logger.warning(
+                        f"[COORDINATOR] ⏰ Campaign {campaign_id} timed out "
+                        f"after {campaign_timeout}s"
+                    )
+                    state.coordinator_decisions.append(
+                        f"Turn {state.current_turn}: Campaign timed out after {campaign_timeout}s"
+                    )
+                    state.log_event("COORDINATOR", "campaign_timeout", f"Timeout after {campaign_timeout}s")
+                    state.phase = CampaignPhase.COMPLETED
+                    break
+
+                # ENHANCED: check pause flag
+                if self._paused:
+                    state.phase = CampaignPhase.PAUSED
+                    state.log_event("COORDINATOR", "campaign_paused", f"Paused at turn {state.current_turn}")
+                    logger.info(f"[COORDINATOR] ⏸️ Campaign paused at turn {state.current_turn}")
+                    # Wait until resumed (poll with short sleep)
+                    while self._paused:
+                        await asyncio.sleep(0.5)
+                    state.log_event("COORDINATOR", "campaign_resumed", f"Resumed at turn {state.current_turn}")
+                    logger.info(f"[COORDINATOR] ▶️ Campaign resumed")
+
                 state.current_turn += 1
                 logger.info(f"[COORDINATOR] Turn {state.current_turn}/{state.max_total_turns}")
 
+                # ENHANCED: per-phase error recovery — catch failures without aborting
                 # Route to Red Agent
                 if not state.is_attack_budget_exhausted():
-                    state = await self._phase_attack(state)
+                    try:
+                        state = await self._phase_attack(state)
+                    except (RuntimeError, OSError, asyncio.TimeoutError) as exc:
+                        _phase_err = {
+                            "phase": "attack",
+                            "turn": state.current_turn,
+                            "error": str(exc),
+                            "timestamp": datetime.now(timezone.utc).isoformat(),
+                        }
+                        state.phase_errors.append(_phase_err)
+                        state.log_event("COORDINATOR", "phase_attack_error", str(exc))
+                        logger.error(f"[COORDINATOR] Attack phase failed (non-fatal): {exc}")
                 else:
                     logger.info("[COORDINATOR] Attack budget exhausted — skipping Red Agent")
                     state.coordinator_decisions.append(
@@ -212,9 +341,32 @@ class CoordinatorAgent:
 
                 # Route to Blue Agent if there are findings
                 if state.vulnerabilities_found and not state.is_defense_budget_exhausted():
-                    state = await self._phase_defend(state)
-                    # Verify remediation worked — re-run the attack
-                    state = await self._phase_verify(state)
+                    try:
+                        state = await self._phase_defend(state)
+                    except (RuntimeError, OSError, asyncio.TimeoutError) as exc:
+                        _phase_err = {
+                            "phase": "defend",
+                            "turn": state.current_turn,
+                            "error": str(exc),
+                            "timestamp": datetime.now(timezone.utc).isoformat(),
+                        }
+                        state.phase_errors.append(_phase_err)
+                        state.log_event("COORDINATOR", "phase_defend_error", str(exc))
+                        logger.error(f"[COORDINATOR] Defend phase failed (non-fatal): {exc}")
+                    else:
+                        # Verify remediation worked — re-run the attack
+                        try:
+                            state = await self._phase_verify(state)
+                        except (RuntimeError, OSError, asyncio.TimeoutError) as exc:
+                            _phase_err = {
+                                "phase": "verify",
+                                "turn": state.current_turn,
+                                "error": str(exc),
+                                "timestamp": datetime.now(timezone.utc).isoformat(),
+                            }
+                            state.phase_errors.append(_phase_err)
+                            state.log_event("COORDINATOR", "phase_verify_error", str(exc))
+                            logger.error(f"[COORDINATOR] Verify phase failed (non-fatal): {exc}")
                 elif state.is_defense_budget_exhausted():
                     logger.info("[COORDINATOR] Defense budget exhausted — skipping Blue Agent")
                     state.coordinator_decisions.append(
@@ -226,6 +378,10 @@ class CoordinatorAgent:
 
             # ── Phase 3: Finalize ────────────────────────────────────────────
             state = await self._phase_finalize(state)
+
+            # ENHANCED: trigger n8n webhook on completion
+            if campaign_webhook:
+                await self._notify_n8n_webhook(campaign_webhook, state)
 
         except Exception as e:
             logger.error(f"[COORDINATOR] ❌ Campaign failed: {e}")
@@ -464,7 +620,8 @@ class CoordinatorAgent:
     async def _phase_finalize(self, state: CampaignState) -> CampaignState:
         """Generate final report and persist everything."""
         state.phase = CampaignPhase.COMPLETED
-        state.completed_at = datetime.utcnow().isoformat()
+        # ENHANCED: timezone-aware UTC timestamp
+        state.completed_at = datetime.now(timezone.utc).isoformat()
 
         unresolved = [
             f for f in state.vulnerabilities_found
@@ -483,6 +640,8 @@ class CoordinatorAgent:
                 "remediations_applied": len(state.remediations_applied),
                 "unresolved_findings": len(unresolved),
                 "tokens_used": state.tokens_used,
+                # ENHANCED: include phase errors count in report
+                "phase_errors": len(state.phase_errors),
             },
             "coordinator_decisions": state.coordinator_decisions,
             "audit_log": state.audit_log,
@@ -490,6 +649,8 @@ class CoordinatorAgent:
             "remediations": state.remediations_applied,
             "unresolved": unresolved,
             "completed_at": state.completed_at,
+            # ENHANCED: include phase errors detail
+            "phase_errors": state.phase_errors,
         }
 
         state.log_event("COORDINATOR", "campaign_complete", "Final report generated")
@@ -501,6 +662,17 @@ class CoordinatorAgent:
             f"Remediations: {len(state.remediations_applied)}, "
             f"Unresolved: {len(unresolved)}"
         )
+
+        # ENHANCED: structured log
+        _struct_logger.info(json.dumps({
+            "event": "campaign_completed",
+            "campaign_id": state.campaign_id,
+            "findings": len(state.vulnerabilities_found),
+            "remediations": len(state.remediations_applied),
+            "unresolved": len(unresolved),
+            "phase_errors": len(state.phase_errors),
+            "completed_at": state.completed_at,
+        }))
 
         return state
 
@@ -523,6 +695,21 @@ class CoordinatorAgent:
         ):
             return True
         return False
+
+    # ENHANCED: campaign timeout enforcement ──────────────────────────────────
+
+    def _is_campaign_timed_out(self, state: CampaignState, timeout_seconds: int) -> bool:
+        """ENHANCED: check whether the campaign has exceeded its time budget."""
+        if not state.started_at or timeout_seconds <= 0:
+            return False
+        try:
+            started = datetime.fromisoformat(state.started_at)
+            if started.tzinfo is None:
+                started = started.replace(tzinfo=timezone.utc)
+            elapsed = (datetime.now(timezone.utc) - started).total_seconds()
+            return elapsed >= timeout_seconds
+        except (ValueError, TypeError):
+            return False
 
     # ── Helper Methods ───────────────────────────────────────────────────────
 
@@ -555,14 +742,16 @@ class CoordinatorAgent:
             }
 
             finding = {
-                "id": f"{agent_type}_{attack_type.replace(' ', '_')}_{datetime.utcnow().timestamp()}",
+                # ENHANCED: uuid4-based finding ID
+                "id": f"{agent_type}_{attack_type.replace(' ', '_')}_{uuid.uuid4().hex[:12]}",
                 "type": attack_type,
                 "severity": severity_map.get(attack_type, "MEDIUM"),
                 "source_agent": agent_type,
                 "target": tool_result.get("target", ""),
                 "findings": tool_result.get("findings", []),
                 "verified": False,
-                "timestamp": datetime.utcnow().isoformat(),
+                # ENHANCED: timezone-aware UTC timestamp
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
             findings.append(finding)
             seen_types.add(attack_type)
@@ -583,13 +772,15 @@ class CoordinatorAgent:
                     and attack_type not in seen_types
                 ):
                     findings.append({
-                        "id": f"{agent_type}_{attack_type.replace(' ', '_')}_{datetime.utcnow().timestamp()}",
+                        # ENHANCED: uuid4-based finding ID
+                        "id": f"{agent_type}_{attack_type.replace(' ', '_')}_{uuid.uuid4().hex[:12]}",
                         "type": attack_type,
                         "severity": severity,
                         "source_agent": agent_type,
                         "raw_output": output[:500],
                         "verified": False,
-                        "timestamp": datetime.utcnow().isoformat(),
+                        # ENHANCED: timezone-aware UTC timestamp
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
                     })
                     seen_types.add(attack_type)
 
@@ -610,36 +801,107 @@ class CoordinatorAgent:
         for rem_type in remediation_types:
             if rem_type.lower() in str(output).lower():
                 remediations.append({
-                    "id": f"REM_{rem_type}_{datetime.utcnow().timestamp()}",
+                    # ENHANCED: uuid4-based remediation ID
+                    "id": f"REM_{rem_type}_{uuid.uuid4().hex[:12]}",
                     "type": rem_type,
                     "status": "applied",
                     "raw_output": str(output)[:500],
-                    "timestamp": datetime.utcnow().isoformat()
+                    # ENHANCED: timezone-aware UTC timestamp
+                    "timestamp": datetime.now(timezone.utc).isoformat()
                 })
                 break  # One remediation per Blue Agent turn
 
         return remediations
 
-    async def _persist_state(self, state: CampaignState, status: str):
-        """Persist campaign state to DynamoDB."""
-        try:
-            self.campaigns_table.put_item(Item={
-                "campaign_id": state.campaign_id,
-                "timestamp": int(datetime.utcnow().timestamp()),
-                "status": status,
-                "target": state.target,
-                "phase": state.phase.value,
-                "current_turn": state.current_turn,
-                "attack_turns_used": state.attack_turns_used,
-                "defense_turns_used": state.defense_turns_used,
-                "vulnerabilities_found": len(state.vulnerabilities_found),
-                "remediations_applied": len(state.remediations_applied),
-                "tokens_used": state.tokens_used,
-                "coordinator_decisions": state.coordinator_decisions[-5:],  # Last 5
-                "completed_at": state.completed_at or "",
-            })
-        except Exception as e:
-            logger.warning(f"[COORDINATOR] DynamoDB persist failed: {e}")
+    async def _persist_state(self, state: CampaignState, status: str) -> None:
+        """Persist campaign state to DynamoDB.
+
+        ENHANCED v2.0: exponential backoff retry on transient failures.
+        """
+        last_exc: Optional[Exception] = None
+
+        for attempt in range(1, self._persist_max_retries + 1):
+            try:
+                self.campaigns_table.put_item(Item={
+                    "campaign_id": state.campaign_id,
+                    # ENHANCED: timezone-aware UTC timestamp
+                    "timestamp": int(datetime.now(timezone.utc).timestamp()),
+                    "status": status,
+                    "target": state.target,
+                    "phase": state.phase.value,
+                    "current_turn": state.current_turn,
+                    "attack_turns_used": state.attack_turns_used,
+                    "defense_turns_used": state.defense_turns_used,
+                    "vulnerabilities_found": len(state.vulnerabilities_found),
+                    "remediations_applied": len(state.remediations_applied),
+                    "tokens_used": state.tokens_used,
+                    "coordinator_decisions": state.coordinator_decisions[-5:],  # Last 5
+                    "completed_at": state.completed_at or "",
+                })
+                return  # success
+            except Exception as e:
+                last_exc = e
+                delay = self._persist_retry_base_delay * (2 ** (attempt - 1))
+                _struct_logger.warning(json.dumps({
+                    "event": "dynamodb_persist_retry",
+                    "attempt": attempt,
+                    "max_retries": self._persist_max_retries,
+                    "delay_s": delay,
+                    "error": str(e),
+                }))
+                if attempt < self._persist_max_retries:
+                    await asyncio.sleep(delay)
+
+        # All retries exhausted — log but don't crash
+        logger.warning(f"[COORDINATOR] DynamoDB persist failed after {self._persist_max_retries} retries: {last_exc}")
+
+    # ENHANCED: n8n webhook notification ──────────────────────────────────────
+
+    async def _notify_n8n_webhook(self, webhook_url: str, state: CampaignState) -> None:
+        """ENHANCED: send campaign completion payload to an n8n webhook.
+
+        Args:
+            webhook_url: the fully-qualified n8n webhook URL.
+            state: completed campaign state to serialize.
+
+        This is a best-effort notification — failures are logged but never
+        propagate to the caller.
+        """
+        payload = {
+            "campaign_id": state.campaign_id,
+            "target": state.target,
+            "phase": state.phase.value,
+            "vulnerabilities_found": len(state.vulnerabilities_found),
+            "remediations_applied": len(state.remediations_applied),
+            "unresolved": len(state.unresolved_findings),
+            "completed_at": state.completed_at,
+        }
+
+        for attempt in range(1, self._persist_max_retries + 1):
+            try:
+                async with httpx.AsyncClient(timeout=10) as client:
+                    resp = await client.post(webhook_url, json=payload)
+                    resp.raise_for_status()
+                _struct_logger.info(json.dumps({
+                    "event": "n8n_webhook_sent",
+                    "campaign_id": state.campaign_id,
+                    "status_code": resp.status_code,
+                }))
+                return
+            except (httpx.HTTPStatusError, httpx.RequestError, OSError) as exc:
+                delay = self._persist_retry_base_delay * (2 ** (attempt - 1))
+                _struct_logger.warning(json.dumps({
+                    "event": "n8n_webhook_retry",
+                    "attempt": attempt,
+                    "error": str(exc),
+                    "delay_s": delay,
+                }))
+                if attempt < self._persist_max_retries:
+                    await asyncio.sleep(delay)
+
+        logger.warning(f"[COORDINATOR] n8n webhook notification failed after retries for {state.campaign_id}")
+
+    # ── Public summary accessor (unchanged) ──────────────────────────────────
 
     def get_campaign_summary(self, state: CampaignState) -> Dict:
         """Return a clean summary of the campaign for API responses."""
@@ -667,4 +929,6 @@ class CoordinatorAgent:
             "coordinator_decisions": state.coordinator_decisions,
             "completed_at": state.completed_at,
             "final_report": state.final_report,
+            # ENHANCED: expose phase errors in summary
+            "phase_errors": state.phase_errors if hasattr(state, "phase_errors") else [],
         }

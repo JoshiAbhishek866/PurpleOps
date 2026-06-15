@@ -36,7 +36,7 @@ References:
 import json
 import logging
 from typing import Dict, List, Optional, Any
-from datetime import datetime
+from datetime import datetime, timezone
 from dataclasses import dataclass, asdict
 
 import boto3
@@ -76,8 +76,8 @@ class AgentManifest:
 
     def to_dict(self) -> Dict:
         d = asdict(self)
-        d["created_at"] = d.get("created_at") or datetime.utcnow().isoformat()
-        d["updated_at"] = datetime.utcnow().isoformat()
+        d["created_at"] = d.get("created_at") or datetime.now(timezone.utc).isoformat()
+        d["updated_at"] = datetime.now(timezone.utc).isoformat()
         return d
 
 
@@ -301,7 +301,7 @@ class AgentRegistry:
                 ExpressionAttributeNames={"#s": "status"},
                 ExpressionAttributeValues={
                     ":s": "deprecated",
-                    ":u": datetime.utcnow().isoformat(),
+                    ":u": datetime.now(timezone.utc).isoformat(),
                 },
             )
             logger.info(f"[REGISTRY] Deprecated {agent_id}:{version}")

@@ -12,7 +12,7 @@ LLM responses with relevant historical context from:
 import os
 import logging
 from typing import List, Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 try:
     import chromadb
@@ -148,7 +148,7 @@ class RAGClient:
                 "cve_id": cve_id,
                 "cvss_score": cvss_score,
                 "severity": severity,
-                "added_at": datetime.utcnow().isoformat()
+                "added_at": datetime.now(timezone.utc).isoformat()
             }
             if metadata:
                 meta.update(metadata)
@@ -253,7 +253,7 @@ class RAGClient:
             meta = {
                 "incident_id": incident_id,
                 "severity": severity,
-                "added_at": datetime.utcnow().isoformat()
+                "added_at": datetime.now(timezone.utc).isoformat()
             }
             if metadata:
                 meta.update(metadata)
@@ -351,7 +351,7 @@ class RAGClient:
                 "policy_id": policy_id,
                 "title": title,
                 "category": category,
-                "added_at": datetime.utcnow().isoformat()
+                "added_at": datetime.now(timezone.utc).isoformat()
             }
             if metadata:
                 meta.update(metadata)
@@ -454,7 +454,7 @@ class RAGClient:
             meta = {
                 "scan_id": scan_id,
                 "target": target,
-                "added_at": datetime.utcnow().isoformat()
+                "added_at": datetime.now(timezone.utc).isoformat()
             }
             if metadata:
                 meta.update(metadata)

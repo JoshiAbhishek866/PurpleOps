@@ -1,5 +1,5 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, Request
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List
 from bson import ObjectId
 import json
@@ -111,7 +111,7 @@ async def create_notification(request: Request):
         "message": data.get("message"),
         "link": data.get("link"),
         "read": False,
-        "createdAt": datetime.utcnow()
+        "createdAt": datetime.now(timezone.utc)
     }
     
     result = await db.notifications.insert_one(notification)
@@ -138,7 +138,7 @@ async def mark_as_read(notification_id: str, request: Request):
     
     result = await db.notifications.update_one(
         {"_id": ObjectId(notification_id)},
-        {"$set": {"read": True, "readAt": datetime.utcnow()}}
+        {"$set": {"read": True, "readAt": datetime.now(timezone.utc)}}
     )
     
     if result.matched_count == 0:
@@ -167,7 +167,7 @@ async def mark_all_as_read(request: Request):
     
     result = await db.notifications.update_many(
         {"userId": user_id, "read": False},
-        {"$set": {"read": True, "readAt": datetime.utcnow()}}
+        {"$set": {"read": True, "readAt": datetime.now(timezone.utc)}}
     )
     
     return {"success": True, "markedRead": result.modified_count}
@@ -249,7 +249,7 @@ async def create_security_notification(db, user_id: str, event_type: str, detail
         **template,
         "metadata": details,
         "read": False,
-        "createdAt": datetime.utcnow()
+        "createdAt": datetime.now(timezone.utc)
     }
     
     result = await db.notifications.insert_one(notification)
