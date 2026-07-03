@@ -55,7 +55,6 @@ htmlcov/
 
 # Kiro
 .kiro/cache/
-<<<<<<< Updated upstream
 
 # Docker
 data/
@@ -63,14 +62,12 @@ reports/
 
 # Gemini
 .gemini/
-=======
-<<<<<<< Updated upstream
-=======
 
-# Kiro steering/memory files — sensitive, keep local only
+# ── Sensitive strategy docs — NEVER push to GitHub ──────────
+# Kiro steering/memory files (project decisions, API hints)
 .kiro/steering/project-memory.md
+.kiro/steering/*.md
 
-# Kiro research files — sensitive strategy docs, keep local only
+# Kiro research files (RCA, GTM strategy, architecture decisions,
+# competitive analysis, cost models — all private)
 .kiro/research/
->>>>>>> Stashed changes
->>>>>>> Stashed changes
