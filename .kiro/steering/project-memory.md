@@ -17,7 +17,7 @@ inclusion: always
 | **Version** | 2.0.0 |
 | **Type** | Startup (not a hackathon project) |
 | **Owner** | Abhishek Joshi (JoshiAbhishek866) |
-| **GitHub** | https://github.com/JoshiAbhishek866/Sentinal-AI |
+| **GitHub** | https://github.com/JoshiAbhishek866/PurpleOps |
 | **Active Branch** | Test |
 | **Workspace Root** | D:\Sentinal-AI-main |
 

@@ -103,3 +103,17 @@ HavoSec-Main-main/content/xl/
 # ── Kiro Internal ────────────────────────────────────────────
 .kiro/cache/
 .kiro/sessions/
+<<<<<<< Updated upstream
+=======
+
+# ── Kiro steering/memory files (sensitive — keep local only) ─
+# These contain project decisions, API keys hints, and internal
+# notes that should not be publicly visible on GitHub.
+.kiro/steering/project-memory.md
+.kiro/steering/*.md
+
+# ── Kiro research files (sensitive strategy docs) ─────────────
+# Contains GTM strategy, RCA, agent architecture decisions,
+# competitive analysis, cost models. Keep local only.
+.kiro/research/
+>>>>>>> Stashed changes
