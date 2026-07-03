@@ -1,5 +1,5 @@
 """
-Free Threat Intelligence Feed Fetcher for Sentinel AI
+Free Threat Intelligence Feed Fetcher for PurpleOps
 
 Fetches and caches data from free threat intel sources:
 - CISA Known Exploited Vulnerabilities (KEV)

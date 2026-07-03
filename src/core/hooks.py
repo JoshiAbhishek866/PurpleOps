@@ -1,5 +1,5 @@
 """
-Agent Lifecycle Hooks for Sentinel AI
+Agent Lifecycle Hooks for PurpleOps
 
 Inspired by the Strands HookProvider pattern — provides automatic
 context loading before agent execution and result persistence after.
@@ -49,7 +49,7 @@ class AgentCompleteEvent(AgentEvent):
 
 class SecurityHookProvider:
     """
-    Lifecycle hook provider for Sentinel AI agents.
+    Lifecycle hook provider for PurpleOps agents.
 
     Responsibilities:
     - on_agent_init:  Load prior findings for the target from campaign

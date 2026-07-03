@@ -79,7 +79,7 @@ async def register(request: Request):
     await db.notifications.insert_one({
         "userId": user_id,
         "type": "success",
-        "title": "Welcome to Sentinel AI!",
+        "title": "Welcome to PurpleOps!",
         "message": "Your account has been created. Please verify your email to access all features.",
         "read": False,
         "createdAt": datetime.utcnow()

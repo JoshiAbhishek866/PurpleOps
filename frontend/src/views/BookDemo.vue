@@ -6,7 +6,7 @@
       <section class="demo-hero" data-testid="demo-hero">
         <h1 class="heading-luxury">Book Your Demo</h1>
         <p class="hero-subtitle">
-          See Sentinel AI in action. Get a personalized demonstration tailored to
+          See PurpleOps in action. Get a personalized demonstration tailored to
           your organization's security needs.
         </p>
       </section>
@@ -260,7 +260,7 @@ const expectations = [
     icon: EyeIcon,
     title: "Platform Overview",
     description:
-      "Complete walkthrough of the Sentinel AI interface and core features",
+      "Complete walkthrough of the PurpleOps interface and core features",
   },
   {
     id: 2,

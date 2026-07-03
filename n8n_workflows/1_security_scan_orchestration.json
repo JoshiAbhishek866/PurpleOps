@@ -1,5 +1,5 @@
 {
-  "name": "Sentinel AI - Security Scan Orchestration",
+  "name": "PurpleOps - Security Scan Orchestration",
   "nodes": [
     {
       "parameters": {

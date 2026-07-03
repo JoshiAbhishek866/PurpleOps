@@ -1,5 +1,5 @@
 """
-Central Coordinator Agent - Sentinel AI
+Central Coordinator Agent - PurpleOps
 =========================================
 Implements the LangGraph Supervisor pattern as recommended by AWS Summit.
 
@@ -367,7 +367,7 @@ class CoordinatorAgent:
     async def _phase_verify(self, state: CampaignState) -> CampaignState:
         """
         Re-run Red attacks after Blue remediates to verify fixes actually work.
-        This is the proof loop — the core value proposition of Sentinel AI.
+        This is the proof loop — the core value proposition of PurpleOps.
         Findings where attack is still blocked get marked verified=True.
         """
         if not state.remediations_applied:

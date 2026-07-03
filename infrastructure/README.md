@@ -1,6 +1,6 @@
-# Sentinel AI - Infrastructure (Terraform)
+# PurpleOps - Infrastructure (Terraform)
 
-Provisions all AWS resources for the Sentinel AI platform.
+Provisions all AWS resources for the PurpleOps platform.
 
 ## Files
 
@@ -83,9 +83,9 @@ terraform apply -var="environment=prod"
 Remote state is stored in S3. Create the bucket before first `terraform init`:
 
 ```bash
-aws s3 mb s3://sentinel-ai-terraform-state --region us-east-1
+aws s3 mb s3://purpleops-terraform-state --region us-east-1
 aws dynamodb create-table \
-  --table-name sentinel-ai-tf-lock \
+  --table-name purpleops-tf-lock \
   --attribute-definitions AttributeName=LockID,AttributeType=S \
   --key-schema AttributeName=LockID,KeyType=HASH \
   --billing-mode PAY_PER_REQUEST

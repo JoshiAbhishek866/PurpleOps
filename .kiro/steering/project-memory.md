@@ -2,7 +2,7 @@
 inclusion: always
 ---
 
-# Sentinel AI - Project Memory
+# PurpleOps - Project Memory
 > Last Updated: June 8, 2026
 > Always include this file in context for all interactions.
 
@@ -12,7 +12,7 @@ inclusion: always
 
 | Field | Value |
 |---|---|
-| **Project Name** | Sentinel AI |
+| **Project Name** | PurpleOps |
 | **Tagline** | "Attack to Defend. Autonomously." |
 | **Version** | 2.0.0 |
 | **Type** | Startup (not a hackathon project) |
@@ -25,7 +25,7 @@ inclusion: always
 
 ## 2. What This Project Is
 
-Sentinel AI is an **autonomous purple teaming platform** that deploys dual-model AI agents to validate vulnerabilities through active exploitation and auto-remediation.
+PurpleOps is an **autonomous purple teaming platform** that deploys dual-model AI agents to validate vulnerabilities through active exploitation and auto-remediation.
 
 - **Red Agent** — Offensive AI (SQL injection, XSS, privilege escalation)
 - **Blue Agent** — Defensive AI (WAF updates, security group modification, compliance reports)
@@ -78,7 +78,7 @@ AgentRegistry (AWS Bedrock AgentCore)
 D:\Sentinal-AI-main\
 ├── .kiro/
 │   ├── specs/
-│   │   └── sentinel-ai/
+│   │   └── purpleops/
 │   │       ├── requirements.md
 │   │       ├── design.md
 │   │       └── tasks.md
@@ -173,6 +173,12 @@ D:\Sentinal-AI-main\
 
 ## 5. Key Decisions & Rationale
 
+### Decision 0: Rebrand from Sentinel AI → PurpleOps
+- **Why**: Azure has a product called "Microsoft Sentinel" — name conflict for a startup
+- **When**: June 2026
+- **Scope**: All code, docs, configs, agent names, DynamoDB tables, S3 buckets
+- **GitHub repo**: Still named `Sentinal-AI` on GitHub (renaming the repo is optional)
+
 ### Decision 1: Hierarchical Coordinator Agent (v2.0)
 - **Why**: AWS Summit recommendation + prevents infinite Red↔Blue loops
 - **Pattern**: LangGraph Supervisor (industry standard for production multi-agent)
@@ -188,7 +194,7 @@ D:\Sentinal-AI-main\
 ### Decision 3: Enhanced Agent System
 - **Why**: Needed specialized agents beyond basic Red/Blue — Recon, Scanner, Vulnerability, Threat Detection, Hardening
 - **What was built**: 13 agents (5 offensive, 5 defensive, 3 core), routes, utils, models
-- **Specs**: `.kiro/specs/sentinel-ai/`
+- **Specs**: `.kiro/specs/purpleops/`
 
 ### Decision 4: Startup Mindset (not hackathon)
 - **Focus**: Enterprise-grade infrastructure, scalability, market positioning
@@ -218,16 +224,16 @@ AWS_REGION=us-east-1
 BEDROCK_MODEL_ID=anthropic.claude-3-5-sonnet-20241022-v2:0
 DYNAMODB_TABLE_CAMPAIGNS=CampaignSessions
 DYNAMODB_TABLE_AUDIT=AuditLogs
-S3_BUCKET_REPORTS=sentinel-ai-artifacts
-RED_AGENT_ROLE_ARN=arn:aws:iam::ACCOUNT_ID:role/sentinel-red-agent-role
-BLUE_AGENT_ROLE_ARN=arn:aws:iam::ACCOUNT_ID:role/sentinel-blue-agent-role
-COORD_AGENT_ROLE_ARN=arn:aws:iam::ACCOUNT_ID:role/sentinel-coordinator-role
+S3_BUCKET_REPORTS=purpleops-artifacts
+RED_AGENT_ROLE_ARN=arn:aws:iam::ACCOUNT_ID:role/purpleops-red-agent-role
+BLUE_AGENT_ROLE_ARN=arn:aws:iam::ACCOUNT_ID:role/purpleops-blue-agent-role
+COORD_AGENT_ROLE_ARN=arn:aws:iam::ACCOUNT_ID:role/purpleops-coordinator-role
 DEFAULT_MAX_ATTACK_TURNS=5
 DEFAULT_MAX_DEFENSE_TURNS=5
 DEFAULT_TOKEN_BUDGET=50000
 AGENT_MODE=default  # or "langgraph"
 N8N_WEBHOOK_URL=http://localhost:5678/webhook
-AGENT_REGISTRY_TABLE=SentinelAgentRegistry
+AGENT_REGISTRY_TABLE=PurpleOpsAgentRegistry
 ```
 
 ---
@@ -257,7 +263,7 @@ AGENT_REGISTRY_TABLE=SentinelAgentRegistry
 ## 10. Pending Work
 
 ### High Priority
-- [ ] Build free public demo at `demo.sentinelai.io` (deliberately vulnerable sandbox)
+- [ ] Build free public demo at `demo.PurpleOps.io` (deliberately vulnerable sandbox)
 - [ ] Wire remaining routes into `src/main.py`
 - [ ] Add WebSocket support for real-time campaign updates
 - [ ] Build Vue.js frontend with 3D architecture visualization
@@ -308,6 +314,6 @@ AGENT_REGISTRY_TABLE=SentinelAgentRegistry
 7. **Git auth**: Use `https://TOKEN@github.com/JoshiAbhishek866/Sentinal-AI.git` format for pushes.
 8. **Agent Registry** uses DynamoDB as fallback when Bedrock AgentCore is not available.
 9. **LangGraph** is opt-in via `AGENT_MODE=langgraph` env var — default uses AgentExecutor.
-10. **13 total agents**: 5 offensive + 5 defensive + 3 core (all part of Sentinel AI).
+10. **13 total agents**: 5 offensive + 5 defensive + 3 core (all part of PurpleOps).
 11. **Infrastructure**: Full Terraform in `infrastructure/` — ECR, Bedrock KB, WAF, CI/CD, EventBridge.
 12. **Only `main` branch exists** — all other branches deleted after cleanup.

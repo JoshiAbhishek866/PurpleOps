@@ -1,5 +1,5 @@
 """
-Authentication Middleware for Sentinel AI
+Authentication Middleware for PurpleOps
 Reusable FastAPI dependencies for protecting endpoints.
 """
 

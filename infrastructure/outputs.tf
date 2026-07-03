@@ -1,15 +1,15 @@
 ###############################################################################
-# Sentinel AI - Terraform Outputs
+# PurpleOps - Terraform Outputs
 ###############################################################################
 
 output "app_runner_service_url" {
-  description = "Sentinel AI API URL"
-  value       = "https://${aws_apprunner_service.sentinel_ai.service_url}"
+  description = "PurpleOps API URL"
+  value       = "https://${aws_apprunner_service.purpleops.service_url}"
 }
 
 output "app_runner_service_arn" {
   description = "App Runner service ARN"
-  value       = aws_apprunner_service.sentinel_ai.arn
+  value       = aws_apprunner_service.purpleops.arn
 }
 
 output "dynamodb_campaigns_table" {
@@ -34,7 +34,7 @@ output "s3_artifacts_bucket" {
 
 output "kms_key_arn" {
   description = "KMS key ARN for encryption"
-  value       = aws_kms_key.sentinel_ai.arn
+  value       = aws_kms_key.purpleops.arn
   sensitive   = true
 }
 
@@ -55,7 +55,7 @@ output "coordinator_role_arn" {
 
 output "cloudwatch_log_group" {
   description = "CloudWatch log group name"
-  value       = aws_cloudwatch_log_group.sentinel_ai.name
+  value       = aws_cloudwatch_log_group.purpleops.name
 }
 
 output "account_id" {

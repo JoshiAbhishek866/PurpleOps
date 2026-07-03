@@ -221,7 +221,7 @@ const storyAchievements = [
 // ── Content store computed ─────────────────────────────────────────────────
 const heroTitle = computed(() => {
   const t = store.hero?.title || "Secure Your Digital Assets with";
-  return t.replace(/\s*(Sentinel AI|with Sentinel AI)\s*$/i, "").trim() + " ";
+  return t.replace(/\s*(PurpleOps|with PurpleOps)\s*$/i, "").trim() + " ";
 });
 const heroSubtitle = computed(
   () =>
@@ -274,7 +274,7 @@ const demoTitle2 = computed(() => store.hero?.demoTitle2 || "Organization?");
 const demoDescription = computed(
   () =>
     store.hero?.demoDescription ||
-    "Get a personalized demonstration of Sentinel AI.",
+    "Get a personalized demonstration of PurpleOps.",
 );
 const demoButtonText = computed(
   () => store.hero?.demoButtonText || "Schedule Your Demo Today",

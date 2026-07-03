@@ -1,5 +1,5 @@
 {
-  "name": "Sentinel AI - Compliance Report Generation",
+  "name": "PurpleOps - Compliance Report Generation",
   "nodes": [
     {
       "parameters": {
@@ -32,7 +32,7 @@
       "credentials": {
         "mongodb": {
           "id": "1",
-          "name": "MongoDB Sentinel AI"
+          "name": "MongoDB PurpleOps"
         }
       }
     },
@@ -53,7 +53,7 @@
       "credentials": {
         "mongodb": {
           "id": "1",
-          "name": "MongoDB Sentinel AI"
+          "name": "MongoDB PurpleOps"
         }
       }
     },
@@ -73,7 +73,7 @@
       "credentials": {
         "mongodb": {
           "id": "1",
-          "name": "MongoDB Sentinel AI"
+          "name": "MongoDB PurpleOps"
         }
       }
     },

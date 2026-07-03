@@ -1,7 +1,7 @@
-# Design Document: Sentinel AI
+# Design Document: PurpleOps
 ## Autonomous Purple Teaming Platform
 
-**Project Name:** Sentinel AI  
+**Project Name:** PurpleOps  
 **Tagline:** "Attack to Defend. Autonomously."  
 **Version:** 1.0  
 **Date:** February 15, 2026
@@ -10,10 +10,10 @@
 
 ## 1. Executive Summary
 
-Sentinel AI is an autonomous purple teaming platform that deploys dual-model AI agents (Red Team offensive + Blue Team defensive) to validate vulnerabilities through active exploitation and auto-remediation. Built on AWS serverless architecture, it eliminates the reactive nature of traditional cybersecurity tools by continuously learning and adapting to new threats.
+PurpleOps is an autonomous purple teaming platform that deploys dual-model AI agents (Red Team offensive + Blue Team defensive) to validate vulnerabilities through active exploitation and auto-remediation. Built on AWS serverless architecture, it eliminates the reactive nature of traditional cybersecurity tools by continuously learning and adapting to new threats.
 
 ### 1.1 Key Differentiators
-- **Active Validation:** Unlike GuardDuty's passive monitoring, Sentinel AI actively exploits vulnerabilities to validate real risk.
+- **Active Validation:** Unlike GuardDuty's passive monitoring, PurpleOps actively exploits vulnerabilities to validate real risk.
 - **Auto-Remediation:** Blue Agent automatically patches infrastructure without human intervention.
 - **Continuous Learning:** RAG-powered knowledge base evolves with each attack-defense cycle.
 - **Zero-Ops:** Fully serverless architecture with scale-to-zero capabilities.
@@ -331,7 +331,7 @@ Attributes:
 
 **Bucket Structure:**
 ```
-sentinel-ai-artifacts/
+purpleops-artifacts/
 ├── compliance-reports/
 │   ├── soc2/
 │   │   └── campaign-{id}-soc2-{date}.pdf
@@ -382,8 +382,8 @@ sentinel-ai-artifacts/
 - DynamoDB throttling events
 
 **Log Groups:**
-- /aws/apprunner/sentinel-ai
-- /aws/waf/sentinel-ai
+- /aws/apprunner/purpleops
+- /aws/waf/purpleops
 - /aws/lambda/blue-agent-trigger
 
 #### 3.5.3 IAM Role Separation
@@ -530,7 +530,7 @@ flowchart TD
 
 **Stack Structure:**
 ```
-sentinel-ai-cdk/
+purpleops-cdk/
 ├── app.py
 ├── stacks/
 │   ├── frontend_stack.py (Amplify)

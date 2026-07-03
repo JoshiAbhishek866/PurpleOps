@@ -1,5 +1,5 @@
 ###############################################################################
-# Sentinel AI - Amazon Bedrock Resources
+# PurpleOps - Amazon Bedrock Resources
 # Knowledge Base + Agent Registry (AgentCore)
 ###############################################################################
 
@@ -121,7 +121,7 @@ resource "aws_iam_role_policy" "bedrock_kb" {
 }
 
 # Bedrock Knowledge Base
-resource "aws_bedrockagent_knowledge_base" "sentinel_ai" {
+resource "aws_bedrockagent_knowledge_base" "purpleops" {
   name     = "${local.name_prefix}-knowledge-base"
   role_arn = aws_iam_role.bedrock_kb.arn
 
@@ -136,7 +136,7 @@ resource "aws_bedrockagent_knowledge_base" "sentinel_ai" {
     type = "OPENSEARCH_SERVERLESS"
     opensearch_serverless_configuration {
       collection_arn    = aws_opensearchserverless_collection.knowledge_base.arn
-      vector_index_name = "sentinel-ai-index"
+      vector_index_name = "purpleops-index"
       field_mapping {
         vector_field   = "embedding"
         text_field     = "text"
@@ -157,8 +157,8 @@ resource "aws_bedrockagent_knowledge_base" "sentinel_ai" {
 }
 
 # S3 data source for knowledge base (CVE docs, playbooks)
-resource "aws_bedrockagent_data_source" "sentinel_ai" {
-  knowledge_base_id = aws_bedrockagent_knowledge_base.sentinel_ai.id
+resource "aws_bedrockagent_data_source" "purpleops" {
+  knowledge_base_id = aws_bedrockagent_knowledge_base.purpleops.id
   name              = "${local.name_prefix}-kb-datasource"
 
   data_source_configuration {
@@ -172,5 +172,5 @@ resource "aws_bedrockagent_data_source" "sentinel_ai" {
 
 output "knowledge_base_id" {
   description = "Bedrock Knowledge Base ID — set as KNOWLEDGE_BASE_ID env var"
-  value       = aws_bedrockagent_knowledge_base.sentinel_ai.id
+  value       = aws_bedrockagent_knowledge_base.purpleops.id
 }

@@ -24,12 +24,12 @@ export const useSEOStore = defineStore('seo', () => {
       error.value = err.message
       console.error('Error fetching global SEO:', err)
       return {
-        siteName: 'Sentinel AI',
-        siteUrl: 'https://Sentinel AI.com',
-        defaultOgImage: 'https://Sentinel AI.com/og-image.jpg',
+        siteName: 'PurpleOps',
+        siteUrl: 'https://PurpleOps.com',
+        defaultOgImage: 'https://PurpleOps.com/og-image.jpg',
         themeColor: '#8b5cf6',
-        twitterSite: '@Sentinel AI',
-        defaultAuthor: 'Sentinel AI Team',
+        twitterSite: '@PurpleOps',
+        defaultAuthor: 'PurpleOps Team',
       }
     } finally {
       loading.value = false

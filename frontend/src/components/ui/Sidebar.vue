@@ -2,9 +2,9 @@
   <aside class="sidebar" :class="{ collapsed: isCollapsed }">
     <div class="sidebar-header">
       <div class="logo-wrapper">
-        <img src="/logo1.png" alt="Sentinel AI Logo" class="logo-icon" />
+        <img src="/logo1.png" alt="PurpleOps Logo" class="logo-icon" />
         <transition name="fade">
-          <span v-if="!isCollapsed" class="logo-text">Sentinel AI</span>
+          <span v-if="!isCollapsed" class="logo-text">PurpleOps</span>
         </transition>
       </div>
       <button

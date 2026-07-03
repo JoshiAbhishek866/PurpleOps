@@ -1,5 +1,5 @@
 """
-Sentinel AI - Autonomous Purple Teaming Platform
+PurpleOps - Autonomous Purple Teaming Platform
 =================================================
 FastAPI application entry point.
 
@@ -27,7 +27,7 @@ from src.utils.logger import setup_logger
 logger = setup_logger(__name__)
 
 app = FastAPI(
-    title="Sentinel AI",
+    title="PurpleOps",
     description="Autonomous Purple Teaming Platform — Attack to Defend. Autonomously.",
     version="2.0.0",
 )
@@ -64,7 +64,7 @@ class CampaignResponse(BaseModel):
 @app.on_event("startup")
 async def startup_event():
     """Register all agents in the registry on startup."""
-    logger.info("[STARTUP] Registering Sentinel AI agents in registry...")
+    logger.info("[STARTUP] Registering PurpleOps agents in registry...")
     try:
         results = await register_sentinel_agents(registry)
         logger.info(f"[STARTUP] ✅ Registered {len(results)} agents")
@@ -77,7 +77,7 @@ async def startup_event():
 @app.get("/")
 def root():
     return {
-        "service": "Sentinel AI",
+        "service": "PurpleOps",
         "tagline": "Attack to Defend. Autonomously.",
         "version": "2.0.0",
         "status": "operational",
@@ -152,7 +152,7 @@ def get_campaign(campaign_id: str):
 @app.get("/registry/agents")
 async def list_registry_agents(agent_type: Optional[str] = None, capability: Optional[str] = None):
     """
-    List all agents in the Sentinel AI registry.
+    List all agents in the PurpleOps registry.
     Equivalent to browsing Docker Hub for cybersecurity agents.
     """
     try:

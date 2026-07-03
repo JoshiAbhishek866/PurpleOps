@@ -18,7 +18,7 @@ onMounted(async () => {
 
 <template>
   <div>
-    <AdminSEO title="Dashboard" description="Sentinel AI Admin Dashboard - Overview and Statistics" />
+    <AdminSEO title="Dashboard" description="PurpleOps Admin Dashboard - Overview and Statistics" />
     <div v-if="isLoading" class="text-center py-5"><CSpinner color="primary" /></div>
 
     <CRow v-else class="mb-4">

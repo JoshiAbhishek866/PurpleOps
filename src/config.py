@@ -16,7 +16,7 @@ class Config:
     DYNAMODB_TABLE_AUDIT     = os.getenv("DYNAMODB_TABLE_AUDIT", "AuditLogs")
 
     # S3
-    S3_BUCKET_REPORTS = os.getenv("S3_BUCKET_REPORTS", "sentinel-ai-artifacts")
+    S3_BUCKET_REPORTS = os.getenv("S3_BUCKET_REPORTS", "purpleops-artifacts")
 
     # IAM Roles
     RED_AGENT_ROLE_ARN   = os.getenv("RED_AGENT_ROLE_ARN", "")

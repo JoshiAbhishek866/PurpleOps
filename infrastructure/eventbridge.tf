@@ -1,5 +1,5 @@
 ###############################################################################
-# Sentinel AI - EventBridge
+# PurpleOps - EventBridge
 # Triggers Blue Agent within 5 seconds of WAF anomaly detection (FR-004)
 ###############################################################################
 
@@ -38,7 +38,7 @@ resource "aws_cloudwatch_event_rule" "cloudwatch_alarm" {
 # SNS topic for Blue Agent notifications
 resource "aws_sns_topic" "blue_agent_trigger" {
   name              = "${local.name_prefix}-blue-agent-trigger"
-  kms_master_key_id = aws_kms_key.sentinel_ai.arn  # Fixed: use .arn not .id
+  kms_master_key_id = aws_kms_key.purpleops.arn  # Fixed: use .arn not .id
 
   tags = {
     Name = "${local.name_prefix}-blue-agent-trigger"

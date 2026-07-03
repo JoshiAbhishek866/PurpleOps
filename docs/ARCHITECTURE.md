@@ -1,8 +1,8 @@
-# Sentinel AI Architecture
+# PurpleOps Architecture
 
 ## System Overview
 
-Sentinel AI is an autonomous purple teaming platform built on AWS serverless architecture.
+PurpleOps is an autonomous purple teaming platform built on AWS serverless architecture.
 
 ## Component Diagram
 

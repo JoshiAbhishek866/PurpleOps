@@ -1,4 +1,4 @@
-# Sentinel AI - robots.txt
+# PurpleOps - robots.txt
 # This file tells search engines which pages to crawl
 
 # Allow all search engines
@@ -20,7 +20,7 @@ Disallow: /*.json$
 Disallow: /*.xml$
 
 # Sitemap location
-Sitemap: https://Sentinel AI.com/sitemap.xml
+Sitemap: https://PurpleOps.com/sitemap.xml
 
 # Crawl delay (optional - prevents aggressive crawling)
 Crawl-delay: 1

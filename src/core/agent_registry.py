@@ -1,9 +1,9 @@
 """
-AWS Bedrock AgentCore Registry Integration - Sentinel AI
+AWS Bedrock AgentCore Registry Integration - PurpleOps
 =========================================================
 Implements the "ECR for AI Agents" concept using AWS Bedrock AgentCore.
 
-This allows Sentinel AI's Red/Blue/Coordinator agents to be:
+This allows PurpleOps's Red/Blue/Coordinator agents to be:
   - Versioned and stored in a central registry
   - Discovered and pulled by any AWS account
   - Deployed consistently across environments
@@ -87,7 +87,7 @@ class AgentManifest:
 
 class AgentRegistry:
     """
-    Central registry for Sentinel AI agents.
+    Central registry for PurpleOps agents.
 
     Storage backends:
     1. AWS Bedrock AgentCore (primary, when available in your region)
@@ -102,7 +102,7 @@ class AgentRegistry:
     """
 
     REGISTRY_TABLE = "SentinelAgentRegistry"
-    REGISTRY_BUCKET_PREFIX = "sentinel-ai-agent-registry"
+    REGISTRY_BUCKET_PREFIX = "purpleops-agent-registry"
 
     def __init__(self):
         self.region = Config.AWS_REGION
@@ -179,7 +179,7 @@ class AgentRegistry:
                 "timeout_seconds": 300,
             },
             cost_per_run_usd=cost_per_run_usd,
-            tags=tags or {"project": "sentinel-ai", "env": "production"},
+            tags=tags or {"project": "purpleops", "env": "production"},
         )
 
         manifest_dict = manifest.to_dict()
@@ -359,7 +359,7 @@ class AgentRegistry:
         """Build the instruction string for Bedrock AgentCore registration."""
         caps = ", ".join(manifest.get("capabilities", []))
         return (
-            f"You are a {manifest['agent_type']} security agent for Sentinel AI. "
+            f"You are a {manifest['agent_type']} security agent for PurpleOps. "
             f"Your capabilities include: {caps}. "
             f"Always log actions to the audit trail. "
             f"Never target production systems without explicit authorization."
@@ -399,7 +399,7 @@ class AgentRegistry:
 
 async def register_sentinel_agents(registry: AgentRegistry) -> Dict:
     """
-    Register all Sentinel AI agents in the registry.
+    Register all PurpleOps agents in the registry.
     Call this once during deployment / bootstrap.
 
     This is the equivalent of pushing your Docker images to ECR.
@@ -410,7 +410,7 @@ async def register_sentinel_agents(registry: AgentRegistry) -> Dict:
     results["coordinator"] = await registry.register_agent(
         agent_id="sentinel-coordinator",
         version="1.0.0",
-        display_name="Sentinel AI Coordinator",
+        display_name="PurpleOps Coordinator",
         description=(
             "Central supervisor agent that orchestrates Red/Blue agents. "
             "Implements LangGraph Supervisor pattern with token budget enforcement, "
@@ -426,14 +426,14 @@ async def register_sentinel_agents(registry: AgentRegistry) -> Dict:
             "state_management",
         ],
         cost_per_run_usd=0.02,
-        tags={"role": "supervisor", "project": "sentinel-ai"},
+        tags={"role": "supervisor", "project": "purpleops"},
     )
 
     # 2. Red Agent
     results["red_agent"] = await registry.register_agent(
         agent_id="sentinel-red-agent",
         version="1.0.0",
-        display_name="Sentinel AI Red Agent",
+        display_name="PurpleOps Red Agent",
         description=(
             "Offensive security agent powered by Amazon Bedrock (Claude 3.5 Sonnet). "
             "Executes controlled SQL injection, XSS, and privilege escalation tests."
@@ -463,14 +463,14 @@ async def register_sentinel_agents(registry: AgentRegistry) -> Dict:
             },
         ],
         cost_per_run_usd=0.08,
-        tags={"role": "offensive", "project": "sentinel-ai"},
+        tags={"role": "offensive", "project": "purpleops"},
     )
 
     # 3. Blue Agent
     results["blue_agent"] = await registry.register_agent(
         agent_id="sentinel-blue-agent",
         version="1.0.0",
-        display_name="Sentinel AI Blue Agent",
+        display_name="PurpleOps Blue Agent",
         description=(
             "Defensive security agent powered by Amazon Bedrock (Claude 3.5 Sonnet). "
             "Auto-remediates vulnerabilities via WAF updates, security group modifications, "
@@ -507,8 +507,8 @@ async def register_sentinel_agents(registry: AgentRegistry) -> Dict:
             },
         ],
         cost_per_run_usd=0.06,
-        tags={"role": "defensive", "project": "sentinel-ai"},
+        tags={"role": "defensive", "project": "purpleops"},
     )
 
-    logger.info(f"[REGISTRY] ✅ Registered {len(results)} Sentinel AI agents")
+    logger.info(f"[REGISTRY] ✅ Registered {len(results)} PurpleOps agents")
     return results

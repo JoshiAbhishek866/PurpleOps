@@ -1,5 +1,5 @@
 """
-Adversarial Self-Improvement Scoring for Sentinel AI
+Adversarial Self-Improvement Scoring for PurpleOps
 
 Tracks Red vs Blue performance with ELO-like ratings.
 After Blue patches a vulnerability, auto-queues Red to re-probe the patch.

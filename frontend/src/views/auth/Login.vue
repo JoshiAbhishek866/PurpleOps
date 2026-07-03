@@ -12,7 +12,7 @@
               />
             </svg>
           </div>
-          <h1 class="logo-text">Sentinel AI</h1>
+          <h1 class="logo-text">PurpleOps</h1>
         </div>
         <p class="login-subtitle">Access your security dashboard</p>
       </div>

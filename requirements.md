@@ -1,7 +1,7 @@
-# Requirements Specification: Sentinel AI
+# Requirements Specification: PurpleOps
 ## Autonomous Purple Teaming Platform
 
-**Project Name:** Sentinel AI  
+**Project Name:** PurpleOps  
 **Tagline:** "Attack to Defend. Autonomously."  
 **Version:** 2.0  
 **Date:** March 16, 2026
@@ -11,10 +11,10 @@
 ## 1. Introduction
 
 ### 1.1 Purpose
-This document specifies the functional and non-functional requirements for Sentinel AI, an autonomous purple teaming platform with dual-model AI agents, a 12-agent orchestration system, lifecycle hooks, persistent campaign memory, and a full web platform.
+This document specifies the functional and non-functional requirements for PurpleOps, an autonomous purple teaming platform with dual-model AI agents, a 12-agent orchestration system, lifecycle hooks, persistent campaign memory, and a full web platform.
 
 ### 1.2 Scope
-Sentinel AI addresses the reactive nature of traditional cybersecurity by implementing:
+PurpleOps addresses the reactive nature of traditional cybersecurity by implementing:
 - Offensive (Red Team) and defensive (Blue Team) AI agents with an attack-defense feedback loop
 - 12 specialized security agents (5 offensive, 5 defensive, 2 core infrastructure)
 - A full-stack web platform with admin panel, client dashboard, blog, SEO, and notification system

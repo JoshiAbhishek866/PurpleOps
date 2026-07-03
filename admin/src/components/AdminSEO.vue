@@ -13,12 +13,12 @@ const props = defineProps({
   },
   description: {
     type: String,
-    default: 'Sentinel AI Admin Panel - Manage your security platform',
+    default: 'PurpleOps Admin Panel - Manage your security platform',
   },
 })
 
 // Full title with admin prefix
-const fullTitle = computed(() => `${props.title} | Sentinel AI Admin`)
+const fullTitle = computed(() => `${props.title} | PurpleOps Admin`)
 
 useHead({
   title: fullTitle.value,
@@ -29,7 +29,7 @@ useHead({
 
     // Basic meta
     { name: 'description', content: props.description },
-    { name: 'author', content: 'Sentinel AI Team' },
+    { name: 'author', content: 'PurpleOps Team' },
 
     // Security headers
     { 'http-equiv': 'X-UA-Compatible', content: 'IE=edge' },

@@ -55,3 +55,6 @@ htmlcov/
 
 # Kiro
 .kiro/cache/
+
+# Kiro steering/memory files — sensitive, keep local only
+.kiro/steering/project-memory.md

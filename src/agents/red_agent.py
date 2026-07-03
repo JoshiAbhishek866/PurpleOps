@@ -1,5 +1,5 @@
 """
-Red Agent — Sentinel AI
+Red Agent — PurpleOps
 ========================
 Offensive AI agent that executes real HTTP-based security tests.
 
@@ -433,7 +433,7 @@ class RedAgent:
         ]
 
         self.prompt = ChatPromptTemplate.from_messages([
-            ("system", """You are a Red Team AI agent for Sentinel AI.
+            ("system", """You are a Red Team AI agent for PurpleOps.
 Your mission: Find real vulnerabilities using the provided tools.
 
 RULES:

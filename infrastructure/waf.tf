@@ -1,8 +1,8 @@
 ###############################################################################
-# Sentinel AI - AWS WAF
+# PurpleOps - AWS WAF
 ###############################################################################
 
-resource "aws_wafv2_web_acl" "sentinel_ai" {
+resource "aws_wafv2_web_acl" "purpleops" {
   count = var.enable_waf ? 1 : 0
 
   name  = "${local.name_prefix}-waf"
@@ -117,13 +117,13 @@ resource "aws_iam_role_policy" "firehose_waf" {
   })
 }
 
-resource "aws_wafv2_web_acl_logging_configuration" "sentinel_ai" {
+resource "aws_wafv2_web_acl_logging_configuration" "purpleops" {
   count                   = var.enable_waf ? 1 : 0
   log_destination_configs = [aws_kinesis_firehose_delivery_stream.waf_logs[0].arn]
-  resource_arn            = aws_wafv2_web_acl.sentinel_ai[0].arn
+  resource_arn            = aws_wafv2_web_acl.purpleops[0].arn
 }
 
 output "waf_web_acl_arn" {
   description = "WAF Web ACL ARN"
-  value       = var.enable_waf ? aws_wafv2_web_acl.sentinel_ai[0].arn : "WAF disabled"
+  value       = var.enable_waf ? aws_wafv2_web_acl.purpleops[0].arn : "WAF disabled"
 }

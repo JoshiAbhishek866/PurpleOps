@@ -66,7 +66,7 @@ const seoTitle = computed(() => {
   return (
     props.title ||
     pageSEO.value.seo?.title ||
-    "Sentinel AI - Advanced Cybersecurity Platform"
+    "PurpleOps - Advanced Cybersecurity Platform"
   );
 });
 
@@ -74,7 +74,7 @@ const seoDescription = computed(() => {
   return (
     props.description ||
     pageSEO.value.seo?.description ||
-    "Protect your organization with Sentinel AI's comprehensive cybersecurity solutions."
+    "Protect your organization with PurpleOps's comprehensive cybersecurity solutions."
   );
 });
 
@@ -97,7 +97,7 @@ const seoImage = computed(() => {
 
 const seoUrl = computed(() => {
   if (props.url) return props.url;
-  const baseUrl = globalSEO.value.siteUrl || "https://Sentinel AI.com";
+  const baseUrl = globalSEO.value.siteUrl || "https://PurpleOps.com";
   return pageSEO.value.seo?.canonical || `${baseUrl}${route.fullPath}`;
 });
 
@@ -111,7 +111,7 @@ const seoRobots = computed(() => {
 
 const seoAuthor = computed(() => {
   return (
-    pageSEO.value.seo?.author || globalSEO.value.defaultAuthor || "Sentinel AI Team"
+    pageSEO.value.seo?.author || globalSEO.value.defaultAuthor || "PurpleOps Team"
   );
 });
 
@@ -121,12 +121,12 @@ const twitterCard = computed(() => {
 
 const twitterSite = computed(() => {
   return (
-    pageSEO.value.seo?.twitterSite || globalSEO.value.twitterSite || "@Sentinel AI"
+    pageSEO.value.seo?.twitterSite || globalSEO.value.twitterSite || "@PurpleOps"
   );
 });
 
 const siteName = computed(() => {
-  return globalSEO.value.siteName || "Sentinel AI";
+  return globalSEO.value.siteName || "PurpleOps";
 });
 
 const themeColor = computed(() => {

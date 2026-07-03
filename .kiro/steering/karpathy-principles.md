@@ -107,11 +107,11 @@ The goal is reducing costly mistakes on non-trivial work, not slowing down simpl
 
 ---
 
-## Sentinel AI Application
+## PurpleOps Application
 
 Apply these principles specifically to this project:
 
-- **Think Before Coding**: Sentinel AI has complex agent interactions. Always clarify which agent (Red/Blue/Coordinator) is being modified before touching agent code.
+- **Think Before Coding**: PurpleOps has complex agent interactions. Always clarify which agent (Red/Blue/Coordinator) is being modified before touching agent code.
 - **Simplicity First**: The Coordinator already handles orchestration. Don't add orchestration logic to Red/Blue agents.
 - **Surgical Changes**: The codebase has 13 agents + routes + utils. Only touch the specific file requested.
 - **Goal-Driven**: For agent changes, define: "Agent X should do Y when Z" — then verify with a test.

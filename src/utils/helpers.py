@@ -1,5 +1,5 @@
 """
-Helper utilities for Sentinel AI Orchestrator
+Helper utilities for PurpleOps Orchestrator
 Common functions used across the system
 """
 
