@@ -5,8 +5,8 @@
 set -e
 
 REGION="us-east-1"
-STATE_BUCKET="sentinel-ai-terraform-state"
-LOCK_TABLE="sentinel-ai-tf-lock"
+STATE_BUCKET="purpleops-terraform-state"
+LOCK_TABLE="purpleops-tf-lock"
 
 echo "Creating S3 state bucket: $STATE_BUCKET"
 aws s3 mb s3://$STATE_BUCKET --region $REGION

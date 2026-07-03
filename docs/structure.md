@@ -1,4 +1,4 @@
-# Sentinel AI - Project Structure
+# PurpleOps - Project Structure
 - **Security**: AWS WAF, IAM, KMS, JWT (python-jose), bcrypt
 +-- .kiro/                              # AI-DLC steering & rules framework
 �   +-- steering/
@@ -24,12 +24,12 @@
 �       �   +-- build-and-test.md
 �       +-- operations/
 �           +-- operations.md
-# Sentinel AI - Project Structure
+# PurpleOps - Project Structure
 
 ## Consolidated Directory Layout
 
 ```text
-sentinel-ai/
+purpleops/
 ├── src/                                # Source code (FastAPI backend)
 │   ├── __init__.py
 │   ├── main.py                        # Unified API entry point

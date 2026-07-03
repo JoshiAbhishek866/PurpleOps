@@ -1,5 +1,5 @@
 """
-RAG (Retrieval-Augmented Generation) Client for Sentinel AI
+RAG (Retrieval-Augmented Generation) Client for PurpleOps
 
 This module provides vector database functionality using ChromaDB to enhance
 LLM responses with relevant historical context from:

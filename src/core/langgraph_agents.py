@@ -1,5 +1,5 @@
 """
-LangGraph Multi-Step Reasoning Agent for Sentinel AI
+LangGraph Multi-Step Reasoning Agent for PurpleOps
 
 Provides an optional upgrade from AgentExecutor to LangGraph state machines.
 Enables Plan → Execute → Observe → Reflect → Adjust loops.

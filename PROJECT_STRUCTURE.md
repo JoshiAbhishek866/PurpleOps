@@ -1,12 +1,12 @@
-# Sentinel AI - Project Structure
+# PurpleOps - Project Structure
 
 ## Directory Layout
 
 ```
-sentinel-ai/
+purpleops/
 ├── .kiro/                              # Kiro IDE configuration
 │   ├── specs/                          # Feature specifications
-│   │   └── sentinel-ai/
+│   │   └── purpleops/
 │   │       ├── requirements.md         # Requirements specification
 │   │       ├── design.md              # Design document
 │   │       └── tasks.md               # Implementation tasks
@@ -127,9 +127,9 @@ AgentRegistry (AWS Bedrock AgentCore)
 
 ## Development Workflow
 
-1. **Requirements** → Define in `.kiro/specs/sentinel-ai/requirements.md`
-2. **Design** → Document in `.kiro/specs/sentinel-ai/design.md`
-3. **Tasks** → Break down in `.kiro/specs/sentinel-ai/tasks.md`
+1. **Requirements** → Define in `.kiro/specs/purpleops/requirements.md`
+2. **Design** → Document in `.kiro/specs/purpleops/design.md`
+3. **Tasks** → Break down in `.kiro/specs/purpleops/tasks.md`
 4. **Implementation** → Code in `src/`
 5. **Testing** → Tests in `tests/`
 6. **Deployment** → Follow `docs/DEPLOYMENT.md`
@@ -137,8 +137,8 @@ AgentRegistry (AWS Bedrock AgentCore)
 ## Getting Started
 
 1. Review `README.md` for project overview
-2. Read `.kiro/specs/sentinel-ai/requirements.md` for requirements
-3. Study `.kiro/specs/sentinel-ai/design.md` for architecture
+2. Read `.kiro/specs/purpleops/requirements.md` for requirements
+3. Study `.kiro/specs/purpleops/design.md` for architecture
 4. Follow `docs/DEPLOYMENT.md` for setup instructions
 
 ## Technology Stack

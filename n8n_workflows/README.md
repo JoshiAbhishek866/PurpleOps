@@ -2,7 +2,7 @@
 
 ## Overview
 
-This directory contains all n8n workflow templates for Sentinel AI security automation platform.
+This directory contains all n8n workflow templates for PurpleOps security automation platform.
 
 ---
 
@@ -391,7 +391,7 @@ Add error handling nodes after HTTP requests to catch failures.
 - **n8n:** v1.0.0+
 - **Ollama:** Running on port 11434
 - **MongoDB:** Running on port 27017 (for workflows 5)
-- **Sentinel AI Backend:** Running on port 8000
+- **PurpleOps Backend:** Running on port 8000
 
 ---
 
@@ -422,6 +422,6 @@ Add error handling nodes after HTTP requests to catch failures.
 1. Import all 5 workflows
 2. Activate each workflow
 3. Test with sample data
-4. Integrate with Sentinel AI backend
+4. Integrate with PurpleOps backend
 5. Monitor execution logs
 6. Customize prompts for better AI responses

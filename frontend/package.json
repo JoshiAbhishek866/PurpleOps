@@ -1,7 +1,7 @@
 {
-  "name": "Sentinel AI-frontend",
+  "name": "PurpleOps-frontend",
   "version": "1.0.0",
-  "description": "Sentinel AI Cybersecurity Platform - Vue.js 3 + Vite",
+  "description": "PurpleOps Cybersecurity Platform - Vue.js 3 + Vite",
   "type": "module",
   "scripts": {
     "start": "vite --host 0.0.0.0 --port 3000",

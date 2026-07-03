@@ -1,5 +1,5 @@
 """
-Pytest configuration and shared fixtures for Sentinel AI tests.
+Pytest configuration and shared fixtures for PurpleOps tests.
 """
 import pytest
 import os
@@ -10,7 +10,7 @@ os.environ.setdefault("ADMIN_JWT_SECRET", "test-admin-jwt-secret-for-testing")
 os.environ.setdefault("SECRET_KEY", "test-secret-key")
 os.environ.setdefault("LLM_PROVIDER", "ollama")
 os.environ.setdefault("MONGO_URL", "mongodb://localhost:27017")
-os.environ.setdefault("MONGO_DB", "sentinel_ai_test")
+os.environ.setdefault("MONGO_DB", "purpleops_test")
 
 from httpx import AsyncClient, ASGITransport
 from jose import jwt

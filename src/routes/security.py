@@ -1,6 +1,6 @@
 """
 Security Scanning Routes
-Integrates with the Sentinel AI agent orchestrator for security scans
+Integrates with the PurpleOps agent orchestrator for security scans
 """
 
 from fastapi import APIRouter, HTTPException, Depends
@@ -48,7 +48,7 @@ async def get_orchestrator():
         # Initialize database with correct parameter names
         db = Database(
             url=os.getenv("MONGO_URL", "mongodb://localhost:27017"),
-            db_name=os.getenv("MONGO_DB", "sentinel_ai")
+            db_name=os.getenv("MONGO_DB", "purpleops")
         )
         await db.connect()
         

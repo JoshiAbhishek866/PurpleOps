@@ -1,5 +1,5 @@
 """
-Campaign Memory Manager for Sentinel AI
+Campaign Memory Manager for PurpleOps
 
 Provides cross-session memory persistence using DynamoDB.
 Inspired by Bedrock AgentCore Memory patterns — adapted for
@@ -32,7 +32,7 @@ class CampaignMemoryManager:
 
     def __init__(self, table_name: str = None, region: str = None):
         self.region = region or Config.AWS_REGION
-        self.table_name = table_name or "SentinelAI_CampaignMemory"
+        self.table_name = table_name or "PurpleOps_CampaignMemory"
         self.dynamodb = boto3.resource("dynamodb", region_name=self.region)
         self.table = self.dynamodb.Table(self.table_name)
         logger.info(f"CampaignMemoryManager initialized: {self.table_name}")
@@ -158,7 +158,7 @@ class CampaignMemoryManager:
         Idempotent — safe to call on every startup.
         """
         region = region or Config.AWS_REGION
-        table_name = table_name or "SentinelAI_CampaignMemory"
+        table_name = table_name or "PurpleOps_CampaignMemory"
         client = boto3.client("dynamodb", region_name=region)
 
         existing = client.list_tables().get("TableNames", [])

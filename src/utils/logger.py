@@ -1,5 +1,5 @@
 """
-Logging utility for Sentinel AI Orchestrator
+Logging utility for PurpleOps Orchestrator
 Provides colored console output and file logging
 """
 

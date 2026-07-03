@@ -1,5 +1,5 @@
 """
-Agent Benchmark Framework for Sentinel AI
+Agent Benchmark Framework for PurpleOps
 
 Runs agents against known-vulnerable applications and scores results.
 Provides measurable metrics: detection rate, false positive rate,
@@ -129,7 +129,7 @@ class BenchmarkResult:
 
 class AgentBenchmark:
     """
-    Benchmark framework for evaluating Sentinel AI agents.
+    Benchmark framework for evaluating PurpleOps agents.
 
     Usage:
         bench = AgentBenchmark()

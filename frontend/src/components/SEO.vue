@@ -17,11 +17,11 @@ const props = defineProps({
   },
   image: {
     type: String,
-    default: "https://Sentinel AI.com/og-image.jpg",
+    default: "https://PurpleOps.com/og-image.jpg",
   },
   url: {
     type: String,
-    default: "https://Sentinel AI.com",
+    default: "https://PurpleOps.com",
   },
   type: {
     type: String,
@@ -35,7 +35,7 @@ const props = defineProps({
 });
 
 // Full title with site name
-const fullTitle = computed(() => `${props.title} | Sentinel AI`);
+const fullTitle = computed(() => `${props.title} | PurpleOps`);
 
 useHead({
   title: fullTitle.value,
@@ -43,7 +43,7 @@ useHead({
     // Basic SEO
     { name: "description", content: props.description },
     { name: "keywords", content: props.keywords },
-    { name: "author", content: "Sentinel AI Team" },
+    { name: "author", content: "PurpleOps Team" },
     { name: "robots", content: "index, follow" },
 
     // Open Graph (Facebook, LinkedIn)
@@ -52,14 +52,14 @@ useHead({
     { property: "og:image", content: props.image },
     { property: "og:url", content: props.url },
     { property: "og:type", content: props.type },
-    { property: "og:site_name", content: "Sentinel AI" },
+    { property: "og:site_name", content: "PurpleOps" },
 
     // Twitter Card
     { name: "twitter:card", content: "summary_large_image" },
     { name: "twitter:title", content: fullTitle.value },
     { name: "twitter:description", content: props.description },
     { name: "twitter:image", content: props.image },
-    { name: "twitter:site", content: "@Sentinel AI" },
+    { name: "twitter:site", content: "@PurpleOps" },
 
     // Additional
     { name: "theme-color", content: "#8b5cf6" },

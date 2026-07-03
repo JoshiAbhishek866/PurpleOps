@@ -89,7 +89,7 @@ import {
 const contentStore = useContentStore();
 
 // Dynamic content
-const aboutTitle = computed(() => contentStore.about?.title || "About Sentinel AI");
+const aboutTitle = computed(() => contentStore.about?.title || "About PurpleOps");
 const aboutDescription = computed(
   () =>
     contentStore.about?.description ||

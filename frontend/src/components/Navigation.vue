@@ -8,8 +8,8 @@
       <!-- Left Side - Logo + Name -->
       <div class="nav-brand">
         <router-link to="/" class="brand-link">
-          <img src="/logo1.png" alt="Sentinel AI Logo" class="brand-logo" />
-          <span class="brand-name">Sentinel AI</span>
+          <img src="/logo1.png" alt="PurpleOps Logo" class="brand-logo" />
+          <span class="brand-name">PurpleOps</span>
         </router-link>
       </div>
 

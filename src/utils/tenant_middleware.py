@@ -1,5 +1,5 @@
 """
-Tenant-Scoping Middleware for Sentinel AI
+Tenant-Scoping Middleware for PurpleOps
 
 Extracts tenant_id from JWT claims and injects it into the request state,
 ensuring all downstream operations are scoped to the correct tenant.

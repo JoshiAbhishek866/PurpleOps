@@ -39,7 +39,7 @@ async function handleLogin() {
             <CCardBody>
               <CForm @submit.prevent="handleLogin">
                 <div class="text-center mb-4">
-                  <h1 class="text-primary fw-bold">Sentinel AI</h1>
+                  <h1 class="text-primary fw-bold">PurpleOps</h1>
                   <p class="text-body-secondary">Admin Panel</p>
                 </div>
                 <h2 class="mb-3">Login</h2>

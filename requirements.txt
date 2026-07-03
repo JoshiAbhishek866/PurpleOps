@@ -1,4 +1,4 @@
-# Sentinel AI v2.0 - Autonomous Purple Teaming Platform
+# PurpleOps v2.0 - Autonomous Purple Teaming Platform
 # ========================================================
 
 # Web Framework

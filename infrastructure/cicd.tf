@@ -1,5 +1,5 @@
 ###############################################################################
-# Sentinel AI - CI/CD Pipeline
+# PurpleOps - CI/CD Pipeline
 # CodePipeline: GitHub → CodeBuild (build + push ECR) → App Runner deploy
 ###############################################################################
 
@@ -65,14 +65,14 @@ resource "aws_iam_role_policy" "codebuild" {
         # Allow CodeBuild to trigger App Runner deployment after push
         Effect   = "Allow"
         Action   = ["apprunner:StartDeployment", "apprunner:DescribeService"]
-        Resource = aws_apprunner_service.sentinel_ai.arn
+        Resource = aws_apprunner_service.purpleops.arn
       }
     ]
   })
 }
 
 # CodeBuild project — buildspec is read from the repo root (buildspec.yml)
-resource "aws_codebuild_project" "sentinel_ai" {
+resource "aws_codebuild_project" "purpleops" {
   name          = "${local.name_prefix}-build"
   service_role  = aws_iam_role.codebuild.arn
   build_timeout = 20
@@ -90,7 +90,7 @@ resource "aws_codebuild_project" "sentinel_ai" {
 
     environment_variable {
       name  = "ECR_REPO_URI"
-      value = aws_ecr_repository.sentinel_ai.repository_url
+      value = aws_ecr_repository.purpleops.repository_url
     }
 
     environment_variable {
@@ -105,7 +105,7 @@ resource "aws_codebuild_project" "sentinel_ai" {
 
     environment_variable {
       name  = "APP_RUNNER_SERVICE_ARN"
-      value = aws_apprunner_service.sentinel_ai.arn
+      value = aws_apprunner_service.purpleops.arn
     }
   }
 
@@ -116,7 +116,7 @@ resource "aws_codebuild_project" "sentinel_ai" {
 
   logs_config {
     cloudwatch_logs {
-      group_name  = aws_cloudwatch_log_group.sentinel_ai.name
+      group_name  = aws_cloudwatch_log_group.purpleops.name
       stream_name = "codebuild"
     }
   }
@@ -153,7 +153,7 @@ resource "aws_iam_role_policy" "codepipeline" {
       {
         Effect   = "Allow"
         Action   = ["codebuild:BatchGetBuilds", "codebuild:StartBuild"]
-        Resource = aws_codebuild_project.sentinel_ai.arn
+        Resource = aws_codebuild_project.purpleops.arn
       },
       {
         Effect   = "Allow"
@@ -173,7 +173,7 @@ resource "aws_codestarconnections_connection" "github" {
 # CodePipeline: Source → Build (build+push ECR + trigger App Runner)
 # Note: App Runner has no native CodePipeline deploy action.
 # The buildspec.yml handles the App Runner deployment via AWS CLI.
-resource "aws_codepipeline" "sentinel_ai" {
+resource "aws_codepipeline" "purpleops" {
   name     = "${local.name_prefix}-pipeline"
   role_arn = aws_iam_role.codepipeline.arn
 
@@ -214,7 +214,7 @@ resource "aws_codepipeline" "sentinel_ai" {
       output_artifacts = ["build_output"]
 
       configuration = {
-        ProjectName = aws_codebuild_project.sentinel_ai.name
+        ProjectName = aws_codebuild_project.purpleops.name
       }
     }
   }
@@ -224,7 +224,7 @@ resource "aws_codepipeline" "sentinel_ai" {
 
 output "codepipeline_name" {
   description = "CodePipeline name"
-  value       = aws_codepipeline.sentinel_ai.name
+  value       = aws_codepipeline.purpleops.name
 }
 
 output "github_connection_arn" {

@@ -1,5 +1,5 @@
 """
-Blue Agent — Sentinel AI
+Blue Agent — PurpleOps
 =========================
 Defensive AI agent that applies real AWS remediations and verifies they work.
 
@@ -64,7 +64,7 @@ def block_ip_in_waf(
                 Scope=web_acl_scope,
                 IPAddressVersion="IPV4",
                 Addresses=[ip_cidr],
-                Tags=[{"Key": "ManagedBy", "Value": "sentinel-ai"}],
+                Tags=[{"Key": "ManagedBy", "Value": "purpleops"}],
             )
             ip_set_arn = response["Summary"]["ARN"]
             ip_set_id = response["Summary"]["Id"]
@@ -298,7 +298,7 @@ def generate_compliance_report(
 
     report = {
         "report_type": "SOC 2 Type II — Autonomous Purple Team Assessment",
-        "generated_by": "Sentinel AI Blue Agent",
+        "generated_by": "PurpleOps Blue Agent",
         "campaign_id": campaign_id,
         "generated_at": datetime.utcnow().isoformat(),
         "controls": {
@@ -396,7 +396,7 @@ class BlueAgent:
         ]
 
         self.prompt = ChatPromptTemplate.from_messages([
-            ("system", """You are a Blue Team AI agent for Sentinel AI.
+            ("system", """You are a Blue Team AI agent for PurpleOps.
 Your mission: Remediate vulnerabilities found by the Red Agent and verify each fix works.
 
 RULES:

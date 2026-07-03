@@ -1,5 +1,5 @@
 """
-Target Scope Enforcer for Sentinel AI
+Target Scope Enforcer for PurpleOps
 
 Validates that scan targets are within the allowed scope before
 any offensive agent executes. Supports domain wildcards, IP CIDRs,

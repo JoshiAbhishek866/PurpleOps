@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api/architecture", tags=["architecture"])
 # MongoDB connection
 MONGODB_URI = os.getenv("MONGO_URL", "mongodb://localhost:27017/")
 client = MongoClient(MONGODB_URI)
-db_name = os.getenv("MONGO_DB", "sentinel_ai")
+db_name = os.getenv("MONGO_DB", "purpleops")
 db = client[db_name]
 
 
