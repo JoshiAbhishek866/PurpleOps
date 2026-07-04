@@ -14,11 +14,11 @@ from datetime import datetime
 from typing import Optional
 
 from langchain.agents import AgentExecutor, create_tool_calling_agent
-from langchain_aws import ChatBedrock
 from langchain.prompts import ChatPromptTemplate
 from langchain.tools import tool
 
 from src.config import Config
+from src.llm.provider import get_provider, TaskResult
 
 # ── AWS clients — LAZY INITIALIZED to prevent import crash ───────────────────
 # Bug Fix: these were previously at module level, crashing the app when
@@ -403,16 +403,50 @@ def generate_compliance_report(
 # ── Blue Agent Class ──────────────────────────────────────────────────────────
 
 class BlueAgent:
+    # ── Lazy Accessors ────────────────────────────────────────────────────────
+    # Bug Fix: ChatBedrock binds tools / opens AWS clients during construction.
+    # Initializing it in __init__ crashes the app when AWS credentials are not
+    # configured. The LLM (and its dependents agent + executor) are therefore
+    # created on first use, not at construction time.
+
+    def _get_llm(self):
+        """
+        Returns the active LLMProvider instance (lazy).
+        Default is DeepSeekProvider (Phase 4 hard-cut).
+        Use get_provider('bedrock') to opt back into Bedrock.
+        """
+        if self._llm is None:
+            self._llm = get_provider()
+        return self._llm
+
+    def _get_agent(self):
+        """Lazily build and cache the tool-calling agent."""
+        if self._agent is None:
+            self._agent = create_tool_calling_agent(
+                self._get_llm(), self.tools, self.prompt
+            )
+        return self._agent
+
+    def _get_executor(self):
+        """Lazily build and cache the AgentExecutor."""
+        if self._executor is None:
+            self._executor = AgentExecutor(
+                agent=self._get_agent(),
+                tools=self.tools,
+                verbose=True,
+                max_iterations=10,
+                handle_parsing_errors=True,
+            )
+        return self._executor
+
     def __init__(self):
-        self.llm = ChatBedrock(
-            model_id=Config.BEDROCK_MODEL_ID,
-            region_name=Config.AWS_REGION,
-            model_kwargs={
-                "temperature": 0.1,  # Very low — deterministic defensive choices
-                "max_tokens": Config.BEDROCK_MAX_TOKENS,
-                "top_p": Config.BEDROCK_TOP_P,
-            },
-        )
+        # LLM and dependent executor are LAZY — see _get_llm / _get_agent /
+        # _get_executor. They require AWS credentials and must not be built
+        # at __init__ time so the module can be imported (and BlueAgent()
+        # instantiated) in environments without AWS access.
+        self._llm = None  # lazy; set by _get_llm() to an LLMProvider instance
+        self._agent = None
+        self._executor = None
 
         self.tools = [
             block_ip_in_waf,
@@ -440,15 +474,6 @@ REMEDIATION STRATEGY:
             ("human", "{input}"),
             ("placeholder", "{agent_scratchpad}"),
         ])
-
-        self.agent = create_tool_calling_agent(self.llm, self.tools, self.prompt)
-        self.executor = AgentExecutor(
-            agent=self.agent,
-            tools=self.tools,
-            verbose=True,
-            max_iterations=10,
-            handle_parsing_errors=True,
-        )
 
         # ENHANCED: evidence chain — every remediation records full context
         self.remediation_evidence: list[dict[str, any]] = []
@@ -585,7 +610,7 @@ REMEDIATION STRATEGY:
         campaign_id = threat_info.get("campaign_id", "unknown")
         session_id = threat_info.get("session_id", campaign_id)
 
-        result = self.executor.invoke({
+        result = self._get_executor().invoke({
             "input": (
                 f"THREAT REPORT:\n"
                 f"Attack Type: {threat_info.get('attack_type', 'Unknown')}\n"
