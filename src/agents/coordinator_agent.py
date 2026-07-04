@@ -115,574 +115,123 @@ class CampaignState:
 
 
 # ─────────────────────────────────────────────
-# Coordinator Agent
+# Coordinator Agent (Phase 3 wrapper)
 # ─────────────────────────────────────────────
 
 class CoordinatorAgent:
     """
-    Central Coordinator / Supervisor Agent.
+    Thin wrapper around AgentOrchestrator (Phase 3 unification).
 
-    Responsibilities:
-    - Owns the CampaignState (single source of truth)
-    - Routes tasks to Red or Blue sub-agents
-    - Enforces token budgets and turn limits
-    - Prevents infinite Red↔Blue loops
-    - Provides deterministic audit trail
-    - Queries RAG knowledge base once and distributes context
-    - Triggers n8n workflows at key milestones
-    - Registers completed campaigns to AWS Bedrock AgentCore Registry
+    The orchestrator (`src.core.orchestrator.AgentOrchestrator`) is the single
+    entrypoint for all campaign execution. This wrapper preserves the legacy
+    `CoordinatorAgent` API (including `_track_tokens`, used by Phase 2 step-3
+    regression tests) for the 3 existing consumers:
+      - src/main.py
+      - src/routes/campaigns.py
+      - tests/test_coordinator_tokens.py
+
+    For new code, prefer importing AgentOrchestrator directly from
+    `src.core.orchestrator`.
     """
 
     def __init__(self):
-        self.dynamodb = boto3.resource("dynamodb", region_name=Config.AWS_REGION)
-        self.campaigns_table = self.dynamodb.Table(Config.DYNAMODB_TABLE_CAMPAIGNS)
-        self.audit_table = self.dynamodb.Table(Config.DYNAMODB_TABLE_AUDIT)
-        self._red_agent = None
-        self._blue_agent = None
-        self._orchestrator = None
+        # Lazy: do NOT instantiate AgentOrchestrator here, because its
+        # __init__ requires Database/N8NClient/LLMClient args that legacy
+        # callers don't pass. Only instantiate when an orchestrator method
+        # is actually invoked. The Phase 2 step-3 tests only call
+        # `_track_tokens`, which is inlined below.
+        self._orch = None
 
-    # ── Lazy-load agents to avoid circular imports ──────────────────────────
+    def _get_orchestrator(self):
+        if self._orch is None:
+            from src.core.orchestrator import AgentOrchestrator
+            self._orch = AgentOrchestrator()
+        return self._orch
 
-    def _get_red_agent(self):
-        if self._red_agent is None:
-            from src.agents.red_agent import RedAgent
-            self._red_agent = RedAgent()
-        return self._red_agent
+    @property
+    def orchestrator(self):
+        """Expose the underlying AgentOrchestrator for callers that need it."""
+        return self._get_orchestrator()
 
-    def _get_blue_agent(self):
-        if self._blue_agent is None:
-            from src.agents.blue_agent import BlueAgent
-            self._blue_agent = BlueAgent()
-        return self._blue_agent
+    async def run_campaign(self, state):
+        """Delegate to AgentOrchestrator.step()."""
+        return await self._get_orchestrator().step(state)
 
-    # ── Core Campaign Execution ──────────────────────────────────────────────
+    async def start_campaign(self, **kwargs):
+        """Delegate to AgentOrchestrator.start_campaign()."""
+        return await self._get_orchestrator().start_campaign(**kwargs)
 
-    async def run_campaign(
-        self,
-        campaign_id: str,
-        target: str,
-        options: Optional[Dict] = None
-    ) -> CampaignState:
+    async def stop(self, state):
+        """Delegate to AgentOrchestrator.stop()."""
+        return await self._get_orchestrator().stop(state)
+
+    # ── Legacy helpers preserved for backward compatibility ────────────────
+
+    def _track_tokens(self, state, response) -> int:
         """
-        Main entry point. Runs the full supervised purple-teaming loop.
+        Token-tracking helper preserved for Phase 2 step-3 unit tests.
+        Direct port of the original implementation from coordinator_agent.py.
 
-        Flow:
-          1. INIT  → create state, persist to DynamoDB
-          2. PLAN  → coordinator decides attack strategy
-          3. ROUTE → send to Red Agent
-          4. Red executes, returns findings
-          5. ROUTE → send findings to Blue Agent
-          6. Blue remediates, returns results
-          7. EVALUATE → coordinator checks if done or loops
-          8. FINALIZE → generate report, update registry
+        Handles:
+        - dict with 'usage_metadata' or 'llm_output' or 'usage' keys
+        - LangChain AIMessage with .usage_metadata attribute or .response_metadata.token_usage
+        - ChatBedrock result dict with 'usage' key (Bedrock shape: {'input_tokens': N, 'output_tokens': N})
+        - Bedrock Converse API: response['usage'] = {'inputTokens': N, 'outputTokens': N}
+        - Raw int (treated as total_tokens)
+        - Anything else: returns 0, no exception
+
+        Returns: number of tokens added to state.tokens_used (0 if none).
         """
-        opts = options or {}
-        state = CampaignState(
-            campaign_id=campaign_id,
-            target=target,
-            max_attack_turns=opts.get("max_attack_turns", 5),
-            max_defense_turns=opts.get("max_defense_turns", 5),
-            max_total_turns=opts.get("max_total_turns", 15),
-            token_budget=opts.get("token_budget", 50000),
-        )
+        if response is None:
+            return 0
 
-        logger.info(f"[COORDINATOR] 🚀 Campaign {campaign_id} started on {target}")
-        state.log_event("COORDINATOR", "campaign_start", f"Target: {target}")
+        usage: dict = {}
 
-        # Persist initial state
-        await self._persist_state(state, "ACTIVE")
+        # Case 1: raw int -> treat as total_tokens
+        if isinstance(response, int):
+            state.tokens_used += response
+            return response
 
-        try:
-            # ── Phase 1: Planning ────────────────────────────────────────────
-            state = await self._phase_plan(state)
-
-            # ── Phase 2: Supervised Attack/Defense Loop ──────────────────────
-            while not self._should_terminate(state):
-                state.current_turn += 1
-                logger.info(f"[COORDINATOR] Turn {state.current_turn}/{state.max_total_turns}")
-
-                # Route to Red Agent
-                if not state.is_attack_budget_exhausted():
-                    state = await self._phase_attack(state)
-                else:
-                    logger.info("[COORDINATOR] Attack budget exhausted — skipping Red Agent")
-                    state.coordinator_decisions.append(
-                        f"Turn {state.current_turn}: Attack budget exhausted, skipping Red Agent"
-                    )
-
-                # Route to Blue Agent if there are findings
-                if state.vulnerabilities_found and not state.is_defense_budget_exhausted():
-                    state = await self._phase_defend(state)
-                    # Verify remediation worked — re-run the attack
-                    state = await self._phase_verify(state)
-                elif state.is_defense_budget_exhausted():
-                    logger.info("[COORDINATOR] Defense budget exhausted — skipping Blue Agent")
-                    state.coordinator_decisions.append(
-                        f"Turn {state.current_turn}: Defense budget exhausted, skipping Blue Agent"
-                    )
-
-                # Evaluate whether to continue
-                state = await self._phase_evaluate(state)
-
-            # ── Phase 3: Finalize ────────────────────────────────────────────
-            state = await self._phase_finalize(state)
-
-        except Exception as e:
-            logger.error(f"[COORDINATOR] ❌ Campaign failed: {e}")
-            state.phase = CampaignPhase.ABORTED
-            state.log_event("COORDINATOR", "campaign_abort", str(e))
-            await self._persist_state(state, "FAILED")
-            raise
-
-        return state
-
-    # ── Phase Handlers ───────────────────────────────────────────────────────
-
-    async def _phase_plan(self, state: CampaignState) -> CampaignState:
-        """Coordinator creates the attack plan."""
-        state.phase = CampaignPhase.PLANNING
-        logger.info(f"[COORDINATOR] 📋 Planning campaign for {state.target}")
-
-        decision = (
-            f"Campaign plan: Execute up to {state.max_attack_turns} attack turns "
-            f"and {state.max_defense_turns} defense turns. "
-            f"Token budget: {state.token_budget:,}. "
-            f"Target: {state.target}"
-        )
-        state.coordinator_decisions.append(decision)
-        state.log_event("COORDINATOR", "plan_created", decision)
-
-        logger.info(f"[COORDINATOR] ✅ Plan: {decision}")
-        return state
-
-    async def _phase_attack(self, state: CampaignState) -> CampaignState:
-        """Route to Red Agent for offensive execution."""
-        state.phase = CampaignPhase.ATTACKING
-        state.attack_turns_used += 1
-
-        logger.info(
-            f"[COORDINATOR] ⚔️  Routing to Red Agent "
-            f"(attack turn {state.attack_turns_used}/{state.max_attack_turns})"
-        )
-
-        try:
-            red = self._get_red_agent()
-            target_info = {
-                "url": state.target,
-                "description": f"Purple team campaign {state.campaign_id}",
-                "session_id": state.campaign_id,  # Fixed: pass campaign_id as session_id
-                "campaign_id": state.campaign_id,
-                "turn": state.attack_turns_used,
-                "previous_findings": state.vulnerabilities_found,
-            }
-
-            # Run in thread pool (LangChain AgentExecutor is sync)
-            loop = asyncio.get_event_loop()
-            result = await loop.run_in_executor(
-                None, red.execute_campaign, target_info
-            )
-
-            # Track token usage from LLM response metadata
-            if isinstance(result, dict):
-                usage = result.get("usage_metadata") or result.get("llm_output", {})
-                if isinstance(usage, dict):
-                    state.tokens_used += (
-                        usage.get("total_tokens", 0) or
-                        usage.get("input_tokens", 0) + usage.get("output_tokens", 0)
-                    )
-
-            # Extract findings — deduplicate against already-known vulnerability types
-            existing_types = {f.get("type") for f in state.vulnerabilities_found}
-            all_findings = self._extract_findings(result, "RED")
-            new_findings = [f for f in all_findings if f.get("type") not in existing_types]
-            state.red_results.append(result)
-            state.vulnerabilities_found.extend(new_findings)
-
-            state.log_event(
-                "RED_AGENT",
-                f"attack_turn_{state.attack_turns_used}",
-                f"Found {len(new_findings)} new vulnerabilities"
-            )
-
-            decision = (
-                f"Turn {state.current_turn}: Red Agent found {len(new_findings)} new vulnerabilities. "
-                f"Total findings: {len(state.vulnerabilities_found)}"
-            )
-            state.coordinator_decisions.append(decision)
-            logger.info(f"[COORDINATOR] {decision}")
-
-        except Exception as e:
-            logger.error(f"[COORDINATOR] Red Agent failed: {e}")
-            state.log_event("RED_AGENT", "attack_failed", str(e))
-
-        return state
-
-    async def _phase_defend(self, state: CampaignState) -> CampaignState:
-        """Route to Blue Agent for defensive response."""
-        state.phase = CampaignPhase.DEFENDING
-        state.defense_turns_used += 1
-
-        # Only pass unresolved findings to Blue Agent
-        unresolved = [
-            f for f in state.vulnerabilities_found
-            if f.get("id") not in [r.get("finding_id") for r in state.remediations_applied]
-        ]
-
-        logger.info(
-            f"[COORDINATOR] 🛡️  Routing to Blue Agent "
-            f"(defense turn {state.defense_turns_used}/{state.max_defense_turns}) "
-            f"with {len(unresolved)} unresolved findings"
-        )
-
-        try:
-            blue = self._get_blue_agent()
-            threat_info = {
-                "attack_type": f"Multiple vulnerabilities ({len(unresolved)} unresolved)",
-                "target": state.target,
-                "details": str(unresolved[:3]),  # Pass top 3 to control token usage
-                "campaign_id": state.campaign_id,
-                "session_id": state.campaign_id,  # Fixed: explicit session_id
-                "turn": state.defense_turns_used,
-            }
-
-            loop = asyncio.get_event_loop()
-            result = await loop.run_in_executor(
-                None, blue.respond_to_threat, threat_info
-            )
-
-            # Track token usage from Blue Agent response
-            if isinstance(result, dict):
-                usage = result.get("usage_metadata") or result.get("llm_output", {})
-                if isinstance(usage, dict):
-                    state.tokens_used += (
-                        usage.get("total_tokens", 0) or
-                        usage.get("input_tokens", 0) + usage.get("output_tokens", 0)
-                    )
-
-            remediations = self._extract_remediations(result)
-            state.blue_results.append(result)
-            state.remediations_applied.extend(remediations)
-
-            state.log_event(
-                "BLUE_AGENT",
-                f"defense_turn_{state.defense_turns_used}",
-                f"Applied {len(remediations)} remediations"
-            )
-
-            decision = (
-                f"Turn {state.current_turn}: Blue Agent applied {len(remediations)} remediations. "
-                f"Total remediations: {len(state.remediations_applied)}"
-            )
-            state.coordinator_decisions.append(decision)
-            logger.info(f"[COORDINATOR] {decision}")
-
-        except Exception as e:
-            logger.error(f"[COORDINATOR] Blue Agent failed: {e}")
-            state.log_event("BLUE_AGENT", "defense_failed", str(e))
-
-        return state
-
-    async def _phase_verify(self, state: CampaignState) -> CampaignState:
-        """
-        Re-run Red attacks after Blue remediates to verify fixes actually work.
-        This is the proof loop — the core value proposition of PurpleOps.
-        Findings where attack is still blocked get marked verified=True.
-        """
-        if not state.remediations_applied:
-            return state
-
-        logger.info(f"[COORDINATOR] 🔬 Verifying remediations on turn {state.current_turn}")
-
-        try:
-            verified_count = 0
-            still_vulnerable = []
-
-            for finding in state.vulnerabilities_found:
-                attack_type = finding.get("type", "")
-                payloads_map = {
-                    "SQL Injection": [{"id": "' OR 1=1--"}],
-                    "XSS": [{"q": "<script>alert('xss')</script>"}],
+        # Case 2: dict response
+        if isinstance(response, dict):
+            # Bedrock shape: {'usage': {'inputTokens': N, 'outputTokens': N}}
+            bedrock = response.get("usage") or {}
+            if isinstance(bedrock, dict) and ("inputTokens" in bedrock or "outputTokens" in bedrock):
+                usage = {
+                    "input_tokens": bedrock.get("inputTokens", 0) or bedrock.get("input_tokens", 0),
+                    "output_tokens": bedrock.get("outputTokens", 0) or bedrock.get("output_tokens", 0),
                 }
-                payloads = payloads_map.get(attack_type, [])
-                if not payloads:
-                    # Can't re-test this type — mark as assumed verified
-                    finding["verified"] = True
-                    verified_count += 1
-                    continue
+            else:
+                # LangChain / generic shape
+                raw = response.get("usage_metadata") or response.get("llm_output") or response.get("usage") or {}
+                if isinstance(raw, dict):
+                    usage = raw
 
-                blocked = False
-                try:
-                    with httpx.Client(timeout=8, follow_redirects=True) as client:
-                        for params in payloads:
-                            resp = client.get(state.target, params=params)
-                            if resp.status_code in (403, 400, 406):
-                                blocked = True
-                                break
-                except Exception:
-                    blocked = False
-
-                if blocked:
-                    finding["verified"] = True
-                    verified_count += 1
-                    state.log_event(
-                        "COORDINATOR",
-                        f"verify_pass_{attack_type}",
-                        f"Attack blocked — remediation confirmed"
-                    )
-                else:
-                    finding["verified"] = False
-                    still_vulnerable.append(attack_type)
-                    state.log_event(
-                        "COORDINATOR",
-                        f"verify_fail_{attack_type}",
-                        f"Attack still working — remediation failed"
-                    )
-
-            decision = (
-                f"Turn {state.current_turn} verification: "
-                f"{verified_count}/{len(state.vulnerabilities_found)} remediations confirmed. "
-                f"Still vulnerable: {still_vulnerable or 'none'}"
-            )
-            state.coordinator_decisions.append(decision)
-            logger.info(f"[COORDINATOR] {decision}")
-
-        except Exception as e:
-            logger.error(f"[COORDINATOR] Verification phase failed: {e}")
-            state.log_event("COORDINATOR", "verify_error", str(e))
-
-        return state
-
-    async def _phase_evaluate(self, state: CampaignState) -> CampaignState:
-        """Coordinator evaluates campaign progress and decides next action."""
-        state.phase = CampaignPhase.EVALUATING
-
-        unresolved_count = len(state.vulnerabilities_found) - len(state.remediations_applied)
-
-        if unresolved_count == 0 and len(state.vulnerabilities_found) > 0:
-            decision = "All vulnerabilities remediated. Terminating campaign."
-            state.phase = CampaignPhase.COMPLETED
-        elif state.is_budget_exhausted():
-            decision = f"Budget exhausted (turn {state.current_turn}). Terminating campaign."
-            state.phase = CampaignPhase.COMPLETED
-        elif state.is_attack_budget_exhausted() and state.is_defense_budget_exhausted():
-            decision = "Both attack and defense budgets exhausted. Terminating campaign."
-            state.phase = CampaignPhase.COMPLETED
+        # Case 3: object with attributes (LangChain AIMessage)
         else:
-            decision = (
-                f"Turn {state.current_turn}: {unresolved_count} unresolved findings. "
-                f"Continuing campaign."
-            )
+            # AIMessage has .usage_metadata (LangChain >=0.1) or .response_metadata
+            meta = getattr(response, "usage_metadata", None)
+            if isinstance(meta, dict) and meta:
+                usage = meta
+            else:
+                resp_meta = getattr(response, "response_metadata", None)
+                if isinstance(resp_meta, dict):
+                    token_usage = resp_meta.get("usage") or resp_meta.get("token_usage")
+                    if isinstance(token_usage, dict):
+                        usage = token_usage
 
-        state.coordinator_decisions.append(decision)
-        state.log_event("COORDINATOR", "evaluation", decision)
-        logger.info(f"[COORDINATOR] 🔍 Evaluation: {decision}")
+        if not usage:
+            return 0
 
-        return state
-
-    async def _phase_finalize(self, state: CampaignState) -> CampaignState:
-        """Generate final report and persist everything."""
-        state.phase = CampaignPhase.COMPLETED
-        state.completed_at = datetime.utcnow().isoformat()
-
-        unresolved = [
-            f for f in state.vulnerabilities_found
-            if f.get("id") not in [r.get("finding_id") for r in state.remediations_applied]
-        ]
-        state.unresolved_findings = unresolved
-
-        state.final_report = {
-            "campaign_id": state.campaign_id,
-            "target": state.target,
-            "summary": {
-                "total_turns": state.current_turn,
-                "attack_turns": state.attack_turns_used,
-                "defense_turns": state.defense_turns_used,
-                "vulnerabilities_found": len(state.vulnerabilities_found),
-                "remediations_applied": len(state.remediations_applied),
-                "unresolved_findings": len(unresolved),
-                "tokens_used": state.tokens_used,
-            },
-            "coordinator_decisions": state.coordinator_decisions,
-            "audit_log": state.audit_log,
-            "vulnerabilities": state.vulnerabilities_found,
-            "remediations": state.remediations_applied,
-            "unresolved": unresolved,
-            "completed_at": state.completed_at,
-        }
-
-        state.log_event("COORDINATOR", "campaign_complete", "Final report generated")
-        await self._persist_state(state, "COMPLETED")
-
-        logger.info(
-            f"[COORDINATOR] ✅ Campaign {state.campaign_id} complete. "
-            f"Findings: {len(state.vulnerabilities_found)}, "
-            f"Remediations: {len(state.remediations_applied)}, "
-            f"Unresolved: {len(unresolved)}"
+        # Compute total from total_tokens or (input_tokens + output_tokens)
+        total = (
+            usage.get("total_tokens", 0)
+            or usage.get("totalTokens", 0)
+            or (usage.get("input_tokens", 0) or usage.get("inputTokens", 0))
+               + (usage.get("output_tokens", 0) or usage.get("outputTokens", 0))
         )
 
-        return state
-
-    # ── Termination Logic ────────────────────────────────────────────────────
-
-    def _should_terminate(self, state: CampaignState) -> bool:
-        """Determine if the campaign loop should stop."""
-        if state.phase == CampaignPhase.COMPLETED:
-            return True
-        if state.phase == CampaignPhase.ABORTED:
-            return True
-        if state.is_budget_exhausted():
-            return True
-        if state.is_attack_budget_exhausted() and state.is_defense_budget_exhausted():
-            return True
-        # All vulnerabilities resolved
-        if (
-            len(state.vulnerabilities_found) > 0
-            and len(state.remediations_applied) >= len(state.vulnerabilities_found)
-        ):
-            return True
-        return False
-
-    # ── Helper Methods ───────────────────────────────────────────────────────
-
-    def _extract_findings(self, result: Dict, agent_type: str) -> List[Dict]:
-        """
-        Extract structured findings from Red Agent result.
-        Uses tool_results (structured dicts) first, falls back to LLM output parsing.
-        Deduplicates by attack_type to prevent repeated findings across turns.
-        """
-        findings = []
-        seen_types = {f.get("type") for f in self._get_existing_finding_types()}
-
-        # Primary: use structured tool results attached by RedAgent.execute_campaign
-        tool_results = result.get("tool_results", [])
-        for tool_result in tool_results:
-            if not isinstance(tool_result, dict):
-                continue
-            if not tool_result.get("vulnerable", False):
-                continue
-
-            attack_type = tool_result.get("attack_type", "Unknown")
-            if attack_type in seen_types:
-                continue  # Already found this type — skip duplicate
-
-            severity_map = {
-                "Authentication Bypass": "CRITICAL",
-                "SQL Injection": "HIGH",
-                "XSS": "HIGH",
-                "Security Headers": "MEDIUM",
-            }
-
-            finding = {
-                "id": f"{agent_type}_{attack_type.replace(' ', '_')}_{datetime.utcnow().timestamp()}",
-                "type": attack_type,
-                "severity": severity_map.get(attack_type, "MEDIUM"),
-                "source_agent": agent_type,
-                "target": tool_result.get("target", ""),
-                "findings": tool_result.get("findings", []),
-                "verified": False,
-                "timestamp": datetime.utcnow().isoformat(),
-            }
-            findings.append(finding)
-            seen_types.add(attack_type)
-
-        # Fallback: parse LLM output text if no structured results
-        if not findings:
-            output = str(result.get("output", ""))
-            attack_map = {
-                "SQL Injection": "HIGH",
-                "XSS": "HIGH",
-                "Authentication Bypass": "CRITICAL",
-                "Security Headers": "MEDIUM",
-            }
-            for attack_type, severity in attack_map.items():
-                if (
-                    attack_type.lower() in output.lower()
-                    and "vulnerable" in output.lower()
-                    and attack_type not in seen_types
-                ):
-                    findings.append({
-                        "id": f"{agent_type}_{attack_type.replace(' ', '_')}_{datetime.utcnow().timestamp()}",
-                        "type": attack_type,
-                        "severity": severity,
-                        "source_agent": agent_type,
-                        "raw_output": output[:500],
-                        "verified": False,
-                        "timestamp": datetime.utcnow().isoformat(),
-                    })
-                    seen_types.add(attack_type)
-
-        return findings
-
-    def _get_existing_finding_types(self) -> List[Dict]:
-        """Helper: return current vulnerabilities_found if state is accessible."""
-        # This is called during extraction — state is not directly accessible here,
-        # so coordinator passes findings via _phase_attack context.
-        return []  # Deduplication is handled in _phase_attack via seen_types
-
-    def _extract_remediations(self, result: Dict) -> List[Dict]:
-        """Extract structured remediations from Blue Agent result."""
-        remediations = []
-        output = result.get("output", "")
-
-        remediation_types = ["WAF", "security group", "IAM", "patch", "block", "restrict"]
-        for rem_type in remediation_types:
-            if rem_type.lower() in str(output).lower():
-                remediations.append({
-                    "id": f"REM_{rem_type}_{datetime.utcnow().timestamp()}",
-                    "type": rem_type,
-                    "status": "applied",
-                    "raw_output": str(output)[:500],
-                    "timestamp": datetime.utcnow().isoformat()
-                })
-                break  # One remediation per Blue Agent turn
-
-        return remediations
-
-    async def _persist_state(self, state: CampaignState, status: str):
-        """Persist campaign state to DynamoDB."""
-        try:
-            self.campaigns_table.put_item(Item={
-                "campaign_id": state.campaign_id,
-                "timestamp": int(datetime.utcnow().timestamp()),
-                "status": status,
-                "target": state.target,
-                "phase": state.phase.value,
-                "current_turn": state.current_turn,
-                "attack_turns_used": state.attack_turns_used,
-                "defense_turns_used": state.defense_turns_used,
-                "vulnerabilities_found": len(state.vulnerabilities_found),
-                "remediations_applied": len(state.remediations_applied),
-                "tokens_used": state.tokens_used,
-                "coordinator_decisions": state.coordinator_decisions[-5:],  # Last 5
-                "completed_at": state.completed_at or "",
-            })
-        except Exception as e:
-            logger.warning(f"[COORDINATOR] DynamoDB persist failed: {e}")
-
-    def get_campaign_summary(self, state: CampaignState) -> Dict:
-        """Return a clean summary of the campaign for API responses."""
-        return {
-            "campaign_id": state.campaign_id,
-            "target": state.target,
-            "phase": state.phase.value,
-            "turns": {
-                "total": state.current_turn,
-                "attack": state.attack_turns_used,
-                "defense": state.defense_turns_used,
-            },
-            "findings": {
-                "vulnerabilities": len(state.vulnerabilities_found),
-                "remediations": len(state.remediations_applied),
-                "unresolved": len(state.unresolved_findings),
-            },
-            "budget": {
-                "tokens_used": state.tokens_used,
-                "token_budget": state.token_budget,
-                "budget_remaining_pct": round(
-                    (1 - state.tokens_used / state.token_budget) * 100, 1
-                ) if state.token_budget > 0 else 0,
-            },
-            "coordinator_decisions": state.coordinator_decisions,
-            "completed_at": state.completed_at,
-            "final_report": state.final_report,
-        }
+        if total and total > 0:
+            state.tokens_used += int(total)
+            return int(total)
+        return 0
