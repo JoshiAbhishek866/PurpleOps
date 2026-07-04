@@ -38,8 +38,39 @@ from src.agents.core import (
 
 from src.utils.logger import setup_logger
 from src.utils.helpers import generate_id
+from src.agents.coordinator_agent import CampaignState, CampaignPhase  # canonical home; re-exported here for unified entrypoint
+
+# Phase 5 step-4: 11-agent wiring imports
+from src.contracts.task_result import TaskResult
+from src.agents.coordinator import CoordinatorAgent as NewCoordinatorAgent
+from src.agents.red_team_lead import RedTeamLead
+from src.agents.blue_team_lead import BlueTeamLead
+from src.agents.recon import ReconAgent
+from src.agents.scanner import ScannerAgent
+from src.agents.vuln import VulnAgent
+from src.agents.credential_testing import CredentialTestingAgent
+from src.agents.threat_detection import ThreatDetectionAgent
+from src.agents.hardening import HardeningAgent
+from src.agents.vuln_prioritization import VulnPrioritizationAgent
+from src.agents.report_generator import ReportGeneratorAgent
 
 logger = setup_logger(__name__)
+
+
+# Routing table for all 11 agents (Phase 5 step-4)
+ROUTING_TABLE = {
+    "init": NewCoordinatorAgent,
+    "recon": ReconAgent,
+    "scan": ScannerAgent,
+    "vuln": VulnAgent,
+    "creds": CredentialTestingAgent,
+    "detect": ThreatDetectionAgent,
+    "attack_red": RedTeamLead,
+    "defend_blue": BlueTeamLead,
+    "harden": HardeningAgent,
+    "prioritize": VulnPrioritizationAgent,
+    "report": ReportGeneratorAgent,
+}
 
 
 class AgentOrchestrator:
@@ -476,3 +507,108 @@ class AgentOrchestrator:
         }
         
         return stats
+
+    # ── Unified Campaign API (Phase 3 unification) ─────────────────────────
+
+    async def start_campaign(
+        self,
+        campaign_id: str,
+        target: str,
+        max_attack_turns: int = 5,
+        max_defense_turns: int = 5,
+        max_total_turns: int = 15,
+        token_budget: int = 50000,
+    ) -> "CampaignState":
+        """Start a new campaign. Returns initial CampaignState."""
+        from src.agents.coordinator_agent import CampaignState
+        return CampaignState(
+            campaign_id=campaign_id,
+            target=target,
+            max_attack_turns=max_attack_turns,
+            max_defense_turns=max_defense_turns,
+            max_total_turns=max_total_turns,
+            token_budget=token_budget,
+        )
+
+    async def step(self, state: "CampaignState") -> "CampaignState":
+        """Run one coordinator step (attack → defend → evaluate). Returns updated state."""
+        from src.agents.coordinator_agent import CoordinatorAgent
+        coord = CoordinatorAgent()
+        return await coord.run_campaign(state)
+
+    async def stop(self, state: "CampaignState") -> "CampaignState":
+        """Mark the campaign as ABORTED. Returns the updated state."""
+        from src.agents.coordinator_agent import CampaignPhase
+        state.phase = CampaignPhase.ABORTED
+        state.coordinator_decisions.append(f"Stopped at turn {state.current_turn}")
+        return state
+
+    # ── 11-Agent Routing Table (Phase 5 step-4) ────────────────────────────
+
+    async def dispatch(self, phase: str, target: str, **kwargs) -> TaskResult:
+        """
+        Route a phase to the appropriate agents. Returns TaskResult.
+
+        Routing:
+          - "init"     → CoordinatorAgent.plan
+          - "recon"    → ReconAgent.execute
+          - "scan"     → ScannerAgent.execute
+          - "vuln"     → VulnAgent.execute
+          - "creds"    → CredentialTestingAgent.execute
+          - "detect"   → ThreatDetectionAgent.execute
+          - "attack"   → RedTeamLead.plan_attack + RedTeamLead.execute
+          - "defend"   → BlueTeamLead.plan_defense + BlueTeamLead.execute
+          - "harden"   → HardeningAgent.execute
+          - "prioritize" → VulnPrioritizationAgent.execute
+          - "report"   → ReportGeneratorAgent.execute
+        """
+        if phase == "init":
+            coord = NewCoordinatorAgent()
+            return await coord.plan(kwargs.get("state"), kwargs.get("context", ""))
+        if phase == "recon":
+            return ReconAgent().execute(target)
+        if phase == "scan":
+            return ScannerAgent().execute(target, kwargs.get("ports"))
+        if phase == "vuln":
+            return VulnAgent().execute(kwargs.get("scan_results", {}))
+        if phase == "creds":
+            return CredentialTestingAgent().execute(target, kwargs.get("username", "admin"))
+        if phase == "detect":
+            return ThreatDetectionAgent().execute(kwargs.get("telemetry"))
+        if phase == "attack":
+            rtl = RedTeamLead()
+            plan = await rtl.plan_attack(target, kwargs.get("prior_findings", []))
+            if plan.success:
+                return rtl.execute(target, str(plan.data))
+            return plan
+        if phase == "defend":
+            btl = BlueTeamLead()
+            plan = await btl.plan_defense(kwargs.get("vulnerabilities", []), target)
+            if plan.success:
+                return btl.execute(kwargs.get("vulnerabilities", []))
+            return plan
+        if phase == "harden":
+            return HardeningAgent().execute(target, kwargs.get("controls"))
+        if phase == "prioritize":
+            return VulnPrioritizationAgent().execute(kwargs.get("vulnerabilities", []))
+        if phase == "report":
+            return ReportGeneratorAgent().execute(
+                kwargs.get("vulnerabilities", []),
+                kwargs.get("remediations", []),
+            )
+        return TaskResult.fail(error=f"Unknown phase: {phase}")
+
+    async def run_full_pipeline(self, target: str, state=None) -> TaskResult:
+        """Run a full attack pipeline: init → recon → scan → vuln → attack → defend → harden → prioritize → report."""
+        if state is None:
+            from src.agents.coordinator import CampaignState
+            state = CampaignState(campaign_id="auto", target=target)
+
+        results = []
+        for phase in ["init", "recon", "scan", "vuln", "attack", "defend", "harden", "prioritize", "report"]:
+            r = await self.dispatch(phase, target, state=state)
+            results.append({"phase": phase, "success": r.success, "data": r.data})
+            if not r.success:
+                return TaskResult.fail(error=f"Pipeline failed at phase {phase}: {r.error}")
+
+        return TaskResult.ok(data={"pipeline": results, "phases_run": len(results)})
