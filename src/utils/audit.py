@@ -1,5 +1,5 @@
 """
-Immutable Audit Logger for Sentinel AI
+Immutable Audit Logger for PurpleOps
 
 Provides tamper-evident, append-only audit entries with SHA-256 hashing.
 Cost-optimized: stores to MongoDB alongside operational data (no separate service needed).

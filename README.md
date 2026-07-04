@@ -1,8 +1,8 @@
-# Sentinel AI — Autonomous Purple Teaming Platform
+# PurpleOps — Autonomous Purple Teaming Platform
 
 > *Attack to Defend. Autonomously.*
 
-Sentinel AI deploys AI agents to **find real vulnerabilities, apply real remediations, and verify the fix worked** — without human intervention.
+PurpleOps deploys AI agents to **find real vulnerabilities, apply real remediations, and verify the fix worked** — without human intervention.
 
 ---
 
@@ -33,7 +33,7 @@ After every Blue remediation, the Coordinator **re-runs the Red attack** to veri
 docker run -d -p 8888:80 vulnerables/web-dvwa
 ```
 
-### 2. Run Sentinel AI
+### 2. Run PurpleOps
 
 ```bash
 git clone https://github.com/JoshiAbhishek866/Sentinal-AI.git
@@ -89,8 +89,8 @@ curl -X POST http://localhost:8000/campaigns/start \
 ## Or Run With Docker
 
 ```bash
-docker build -t sentinel-ai .
-docker run -p 8000:8000 --env-file .env sentinel-ai
+docker build -t purpleops .
+docker run -p 8000:8000 --env-file .env purpleops
 ```
 
 ---

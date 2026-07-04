@@ -7,8 +7,8 @@
         <!-- Brand column -->
         <div class="footer-brand">
           <div class="footer-logo">
-            <img src="/logo1.png" alt="Sentinel AI" class="logo-img" />
-            <span class="logo-name">Sentinel AI</span>
+            <img src="/logo1.png" alt="PurpleOps" class="logo-img" />
+            <span class="logo-name">PurpleOps</span>
           </div>
           <p class="footer-tagline">
             Advanced cybersecurity analytics and threat-detection platform
@@ -126,7 +126,7 @@
 
       <!-- ── Copyright bar ── -->
       <div class="footer-copy">
-        <span>© {{ currentYear }} Sentinel AI. All rights reserved.</span>
+        <span>© {{ currentYear }} PurpleOps. All rights reserved.</span>
         <div class="legal-links">
           <a href="#" class="legal-link">Privacy Policy</a>
           <span class="sep">·</span>

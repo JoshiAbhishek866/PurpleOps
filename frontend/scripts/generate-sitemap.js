@@ -2,10 +2,10 @@ import { SitemapStream, streamToPromise } from "sitemap";
 import { createWriteStream } from "fs";
 import { resolve } from "path";
 
-console.log("🗺️  Generating sitemap for Sentinel AI...\n");
+console.log("🗺️  Generating sitemap for PurpleOps...\n");
 
 const sitemap = new SitemapStream({
-  hostname: "https://Sentinel AI.com",
+  hostname: "https://PurpleOps.com",
 });
 
 // Define all your pages
@@ -87,7 +87,7 @@ streamToPromise(sitemap)
     console.log("\n🚀 Next steps:");
     console.log("   1. Deploy your site");
     console.log("   2. Submit sitemap to Google Search Console");
-    console.log("   3. URL: https://Sentinel AI.com/sitemap.xml");
+    console.log("   3. URL: https://PurpleOps.com/sitemap.xml");
   })
   .catch((err) => {
     console.error("❌ Error generating sitemap:", err);

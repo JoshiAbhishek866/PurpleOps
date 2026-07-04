@@ -146,7 +146,7 @@
           <CFormLabel>Page Title <span class="text-danger">*</span></CFormLabel>
           <CFormInput
             v-model="editForm.seo.title"
-            placeholder="e.g., Secure Your Digital Assets | Sentinel AI"
+            placeholder="e.g., Secure Your Digital Assets | PurpleOps"
           />
         </div>
 
@@ -196,7 +196,7 @@
             <CFormInput
               v-model="editForm.seo.canonical"
               type="url"
-              placeholder="https://Sentinel AI.com/page"
+              placeholder="https://PurpleOps.com/page"
             />
           </CCol>
           <CCol :md="4">
@@ -212,7 +212,7 @@
 
         <div class="mb-3">
           <CFormLabel>Author</CFormLabel>
-          <CFormInput v-model="editForm.seo.author" placeholder="Sentinel AI Team" />
+          <CFormInput v-model="editForm.seo.author" placeholder="PurpleOps Team" />
         </div>
       </CModalBody>
       <CModalFooter>
@@ -238,12 +238,12 @@
       <CModalBody>
         <div class="mb-3">
           <CFormLabel>Site Name <span class="text-danger">*</span></CFormLabel>
-          <CFormInput v-model="globalForm.siteName" placeholder="Sentinel AI" />
+          <CFormInput v-model="globalForm.siteName" placeholder="PurpleOps" />
         </div>
 
         <div class="mb-3">
           <CFormLabel>Site URL <span class="text-danger">*</span></CFormLabel>
-          <CFormInput v-model="globalForm.siteUrl" type="url" placeholder="https://Sentinel AI.com" />
+          <CFormInput v-model="globalForm.siteUrl" type="url" placeholder="https://PurpleOps.com" />
         </div>
 
         <div class="mb-3">
@@ -251,7 +251,7 @@
           <CFormInput
             v-model="globalForm.defaultOgImage"
             type="url"
-            placeholder="https://Sentinel AI.com/og-image.jpg"
+            placeholder="https://PurpleOps.com/og-image.jpg"
           />
         </div>
 
@@ -262,11 +262,11 @@
           </CCol>
           <CCol :md="4">
             <CFormLabel>Twitter Handle</CFormLabel>
-            <CFormInput v-model="globalForm.twitterSite" placeholder="@Sentinel AI" />
+            <CFormInput v-model="globalForm.twitterSite" placeholder="@PurpleOps" />
           </CCol>
           <CCol :md="5">
             <CFormLabel>Default Author</CFormLabel>
-            <CFormInput v-model="globalForm.defaultAuthor" placeholder="Sentinel AI Team" />
+            <CFormInput v-model="globalForm.defaultAuthor" placeholder="PurpleOps Team" />
           </CCol>
         </CRow>
       </CModalBody>
@@ -311,12 +311,12 @@ const editForm = ref({
 })
 
 const globalForm = ref({
-  siteName: 'Sentinel AI',
-  siteUrl: 'https://Sentinel AI.com',
-  defaultOgImage: 'https://Sentinel AI.com/og-image.jpg',
+  siteName: 'PurpleOps',
+  siteUrl: 'https://PurpleOps.com',
+  defaultOgImage: 'https://PurpleOps.com/og-image.jpg',
   themeColor: '#8b5cf6',
-  twitterSite: '@Sentinel AI',
-  defaultAuthor: 'Sentinel AI Team',
+  twitterSite: '@PurpleOps',
+  defaultAuthor: 'PurpleOps Team',
 })
 
 const pageIcons = {

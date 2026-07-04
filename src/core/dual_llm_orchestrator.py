@@ -1,5 +1,5 @@
 """
-Dual LLM Orchestrator for Sentinel AI
+Dual LLM Orchestrator for PurpleOps
 Coordinates Offensive (Red Team) and Defensive (Blue Team) AI models
 """
 
@@ -480,7 +480,7 @@ async def example_traffic_analysis():
     # Suspicious traffic
     traffic = {
         'source_ip': '192.168.1.100',
-        'destination': 'api.Sentinel AI.com/login',
+        'destination': 'api.PurpleOps.com/login',
         'protocol': 'HTTP',
         'payload': "username=admin' OR '1'='1'--&password=anything",
         'headers': {
@@ -496,7 +496,7 @@ async def main():
     """
     Run all examples
     """
-    print("🚀 Sentinel AI Dual LLM Orchestrator Demo\n")
+    print("🚀 PurpleOps Dual LLM Orchestrator Demo\n")
     
     # Example 1: Code vulnerability scan
     print("\n📝 Example 1: Scanning vulnerable code...")

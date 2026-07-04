@@ -1,5 +1,5 @@
 ###############################################################################
-# Sentinel AI - Terraform Variables
+# PurpleOps - Terraform Variables
 ###############################################################################
 
 variable "aws_region" {
@@ -23,7 +23,7 @@ variable "ecr_image_uri" {
   description = "ECR image URI override. Leave empty to use the ECR repo created by this config."
   type        = string
   default     = ""
-  # If empty, main.tf uses: aws_ecr_repository.sentinel_ai.repository_url + ":latest"
+  # If empty, main.tf uses: aws_ecr_repository.purpleops.repository_url + ":latest"
 }
 
 variable "bedrock_model_id" {

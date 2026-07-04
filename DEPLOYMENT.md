@@ -1,4 +1,4 @@
-# 🚀 Sentinel AI — Deployment & Execution Guide
+# 🚀 PurpleOps — Deployment & Execution Guide
 
 ## Quick Start (Local — 5 Minutes)
 
@@ -42,14 +42,14 @@ python -m uvicorn src.main:app --host 0.0.0.0 --port 8000
 
 ```bash
 # Build
-docker build -t sentinel-ai .
+docker build -t purpleops .
 
 # Run (requires MongoDB + Ollama available on the network)
 docker run -d \
-  --name sentinel-ai \
+  --name purpleops \
   -p 8000:8000 \
   --env-file .env \
-  sentinel-ai
+  purpleops
 ```
 
 ---
@@ -58,7 +58,7 @@ docker run -d \
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    Sentinel AI API                      │
+│                    PurpleOps API                      │
 │                  (FastAPI, port 8000)                    │
 ├───────────┬───────────┬──────────────┬──────────────────┤
 │ Red Agent │ Blue Agent│ Orchestrator │ Knowledge Store   │
@@ -87,7 +87,7 @@ docker run -d \
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `MONGO_URL` | `mongodb://localhost:27017` | MongoDB connection string |
-| `MONGO_DB` | `sentinel_ai` | Database name |
+| `MONGO_DB` | `purpleops` | Database name |
 
 ### LLM Provider (Choose One)
 | Variable | Default | Description |
@@ -187,7 +187,7 @@ aws dynamodb create-table \
 
 # Campaign Memory
 aws dynamodb create-table \
-  --table-name SentinelAI_CampaignMemory \
+  --table-name PurpleOps_CampaignMemory \
   --attribute-definitions \
     AttributeName=target,AttributeType=S \
     AttributeName=created_at,AttributeType=S \
@@ -199,7 +199,7 @@ aws dynamodb create-table \
 
 ### S3 Bucket
 ```bash
-aws s3 mb s3://sentinel-ai-artifacts
+aws s3 mb s3://purpleops-artifacts
 ```
 
 ### Enable Bedrock

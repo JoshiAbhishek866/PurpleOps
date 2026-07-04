@@ -5,11 +5,11 @@ async def seed_database(db):
     """Seed database with initial data"""
     
     # Seed admin user
-    admin_exists = await db.admin_users.find_one({"email": "admin@Sentinel AI.com"})
+    admin_exists = await db.admin_users.find_one({"email": "admin@PurpleOps.com"})
     if not admin_exists:
         hashed_password = bcrypt.hashpw("admin123".encode(), bcrypt.gensalt()).decode()
         await db.admin_users.insert_one({
-            "email": "admin@Sentinel AI.com",
+            "email": "admin@PurpleOps.com",
             "password": hashed_password,
             "firstName": "Admin",
             "lastName": "User",
@@ -115,7 +115,7 @@ async def seed_database(db):
 #                 "slug": "advanced-threat-detection-ai",
 #                 "content": "<p>Artificial Intelligence is revolutionizing how we detect and respond to cyber threats...</p>",
 #                 "excerpt": "Learn how AI is transforming cybersecurity threat detection.",
-#                 "author": "Sentinel AI Team",
+#                 "author": "PurpleOps Team",
 #                 "category": "Technology",
 #                 "tags": ["AI", "Threat Detection", "Security"],
 #                 "status": "published",
@@ -127,7 +127,7 @@ async def seed_database(db):
 #                 "slug": "zero-trust-architecture-guide",
 #                 "content": "<p>Implementing zero trust security requires a fundamental shift in thinking...</p>",
 #                 "excerpt": "A comprehensive guide to implementing zero trust security.",
-#                 "author": "Sentinel AI Team",
+#                 "author": "PurpleOps Team",
 #                 "category": "Best Practices",
 #                 "tags": ["Zero Trust", "Architecture", "Security"],
 #                 "status": "published",
@@ -139,7 +139,7 @@ async def seed_database(db):
 #                 "slug": "ransomware-prevention-strategies",
 #                 "content": "<p>Protecting your organization from ransomware requires multiple layers of defense...</p>",
 #                 "excerpt": "Essential strategies to protect against ransomware attacks.",
-#                 "author": "Sentinel AI Team",
+#                 "author": "PurpleOps Team",
 #                 "category": "Prevention",
 #                 "tags": ["Ransomware", "Prevention", "Security"],
 #                 "status": "published",
@@ -160,7 +160,7 @@ async def seed_database(db):
 # def get_default_content(section):
 #     defaults = {
 #         "hero": {
-#             "title": "Secure Your Digital Assets with Sentinel AI",
+#             "title": "Secure Your Digital Assets with PurpleOps",
 #             "subtitle": "Advanced cybersecurity analytics and threat detection platform designed for modern organizations.",
 #             "ctaText": "Get Started",
 #             "ctaLink": "/book-demo"
@@ -175,8 +175,8 @@ async def seed_database(db):
 #             ]
 #         },
 #         "about": {
-#             "title": "About Sentinel AI",
-#             "description": "Sentinel AI is a leading cybersecurity company dedicated to protecting organizations from evolving threats.",
+#             "title": "About PurpleOps",
+#             "description": "PurpleOps is a leading cybersecurity company dedicated to protecting organizations from evolving threats.",
 #             "mission": "Our mission is to provide world-class security solutions that enable businesses to operate safely in the digital age."
 #         },
 #         "services": {

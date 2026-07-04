@@ -1,5 +1,5 @@
 """
-ChromaDB-Based Knowledge Store for Sentinel AI
+ChromaDB-Based Knowledge Store for PurpleOps
 
 The data flywheel: every scan finding is embedded and stored.
 Future scans query this store for relevant context via RAG.
@@ -31,7 +31,7 @@ def _get_collection(collection_name: str = "security_findings"):
         _client = chromadb.PersistentClient(path="./data/chromadb")
         _collection = _client.get_or_create_collection(
             name=collection_name,
-            metadata={"description": "Sentinel AI security findings knowledge base"}
+            metadata={"description": "PurpleOps security findings knowledge base"}
         )
         logger.info(f"✅ ChromaDB collection '{collection_name}' ready ({_collection.count()} documents)")
         return _collection

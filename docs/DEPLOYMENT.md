@@ -14,7 +14,7 @@
 
 ```bash
 git clone <repository-url>
-cd sentinel-ai
+cd purpleops
 ```
 
 ### 2. Set Up Python Environment
@@ -51,23 +51,23 @@ API will be available at `http://localhost:8000`
 aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin <account-id>.dkr.ecr.us-east-1.amazonaws.com
 
 # Build image
-docker build -t sentinel-ai .
+docker build -t purpleops .
 
 # Tag image
-docker tag sentinel-ai:latest <account-id>.dkr.ecr.us-east-1.amazonaws.com/sentinel-ai:latest
+docker tag purpleops:latest <account-id>.dkr.ecr.us-east-1.amazonaws.com/purpleops:latest
 
 # Push to ECR
-docker push <account-id>.dkr.ecr.us-east-1.amazonaws.com/sentinel-ai:latest
+docker push <account-id>.dkr.ecr.us-east-1.amazonaws.com/purpleops:latest
 ```
 
 2. **Create App Runner Service**
 
 ```bash
 aws apprunner create-service \
-  --service-name sentinel-ai \
+  --service-name purpleops \
   --source-configuration '{
     "ImageRepository": {
-      "ImageIdentifier": "<account-id>.dkr.ecr.us-east-1.amazonaws.com/sentinel-ai:latest",
+      "ImageIdentifier": "<account-id>.dkr.ecr.us-east-1.amazonaws.com/purpleops:latest",
       "ImageRepositoryType": "ECR"
     },
     "AutoDeploymentsEnabled": true
@@ -117,9 +117,9 @@ aws dynamodb create-table \
 2. **Create S3 Bucket**
 
 ```bash
-aws s3 mb s3://sentinel-ai-artifacts
+aws s3 mb s3://purpleops-artifacts
 aws s3api put-bucket-encryption \
-  --bucket sentinel-ai-artifacts \
+  --bucket purpleops-artifacts \
   --server-side-encryption-configuration '{
     "Rules": [{
       "ApplyServerSideEncryptionByDefault": {
@@ -135,7 +135,7 @@ Ensure your AWS account has access to Amazon Bedrock and Claude 3.5 Sonnet model
 
 ## Monitoring
 
-- CloudWatch Logs: `/aws/apprunner/sentinel-ai`
+- CloudWatch Logs: `/aws/apprunner/purpleops`
 - CloudWatch Metrics: App Runner metrics
 - DynamoDB: Audit logs table
 

@@ -3,7 +3,7 @@ The problem statement:-
 
 
 Solution:-
-Sentinel AI
+PurpleOps
 1. A cyber security agentic ai based company which has basically
 two models. 
 

@@ -1,1 +1,1 @@
-# Sentinel AI Agents Module
+# PurpleOps Agents Module

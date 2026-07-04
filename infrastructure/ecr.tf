@@ -1,9 +1,9 @@
 ###############################################################################
-# Sentinel AI - ECR Repository
+# PurpleOps - ECR Repository
 # Stores Docker images for the API container
 ###############################################################################
 
-resource "aws_ecr_repository" "sentinel_ai" {
+resource "aws_ecr_repository" "purpleops" {
   name                 = "${local.name_prefix}-api"
   image_tag_mutability = "MUTABLE"
 
@@ -13,7 +13,7 @@ resource "aws_ecr_repository" "sentinel_ai" {
 
   encryption_configuration {
     encryption_type = "KMS"
-    kms_key         = aws_kms_key.sentinel_ai.arn
+    kms_key         = aws_kms_key.purpleops.arn
   }
 
   tags = {
@@ -21,8 +21,8 @@ resource "aws_ecr_repository" "sentinel_ai" {
   }
 }
 
-resource "aws_ecr_lifecycle_policy" "sentinel_ai" {
-  repository = aws_ecr_repository.sentinel_ai.name
+resource "aws_ecr_lifecycle_policy" "purpleops" {
+  repository = aws_ecr_repository.purpleops.name
 
   policy = jsonencode({
     rules = [
@@ -42,5 +42,5 @@ resource "aws_ecr_lifecycle_policy" "sentinel_ai" {
 
 output "ecr_repository_url" {
   description = "ECR repository URL — use this as ecr_image_uri in tfvars"
-  value       = "${aws_ecr_repository.sentinel_ai.repository_url}:latest"
+  value       = "${aws_ecr_repository.purpleops.repository_url}:latest"
 }

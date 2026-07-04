@@ -1,5 +1,5 @@
 ###############################################################################
-# Sentinel AI - Main Terraform Configuration
+# PurpleOps - Main Terraform Configuration
 ###############################################################################
 
 terraform {
@@ -14,11 +14,11 @@ terraform {
 
   # Remote state — create the bucket + lock table first (see bootstrap/README.md)
   backend "s3" {
-    bucket         = "sentinel-ai-terraform-state"
-    key            = "sentinel-ai/terraform.tfstate"
+    bucket         = "purpleops-terraform-state"
+    key            = "purpleops/terraform.tfstate"
     region         = "us-east-1"
     encrypt        = true
-    dynamodb_table = "sentinel-ai-tf-lock"
+    dynamodb_table = "purpleops-tf-lock"
   }
 }
 
@@ -27,7 +27,7 @@ provider "aws" {
 
   default_tags {
     tags = {
-      Project     = "sentinel-ai"
+      Project     = "purpleops"
       Environment = var.environment
       ManagedBy   = "terraform"
       Owner       = "abhishek-joshi"
@@ -45,10 +45,10 @@ data "aws_region" "current" {}
 locals {
   account_id  = data.aws_caller_identity.current.account_id
   region      = data.aws_region.current.name
-  name_prefix = "sentinel-ai-${var.environment}"
+  name_prefix = "purpleops-${var.environment}"
 
   # ECR image URI: use override var if provided, else use the ECR repo created here
-  ecr_image_uri = var.ecr_image_uri != "" ? var.ecr_image_uri : "${aws_ecr_repository.sentinel_ai.repository_url}:latest"
+  ecr_image_uri = var.ecr_image_uri != "" ? var.ecr_image_uri : "${aws_ecr_repository.purpleops.repository_url}:latest"
 }
 
 ###############################################################################
@@ -77,7 +77,7 @@ resource "aws_dynamodb_table" "campaign_sessions" {
 
   server_side_encryption {
     enabled     = true
-    kms_key_arn = aws_kms_key.sentinel_ai.arn
+    kms_key_arn = aws_kms_key.purpleops.arn
   }
 
   tags = { Name = "CampaignSessions" }
@@ -105,7 +105,7 @@ resource "aws_dynamodb_table" "audit_logs" {
 
   server_side_encryption {
     enabled     = true
-    kms_key_arn = aws_kms_key.sentinel_ai.arn
+    kms_key_arn = aws_kms_key.purpleops.arn
   }
 
   tags = { Name = "AuditLogs" }
@@ -129,7 +129,7 @@ resource "aws_dynamodb_table" "agent_registry" {
 
   server_side_encryption {
     enabled     = true
-    kms_key_arn = aws_kms_key.sentinel_ai.arn
+    kms_key_arn = aws_kms_key.purpleops.arn
   }
 
   tags = { Name = "SentinelAgentRegistry" }
@@ -155,7 +155,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "artifacts" {
   rule {
     apply_server_side_encryption_by_default {
       sse_algorithm     = "aws:kms"
-      kms_master_key_id = aws_kms_key.sentinel_ai.arn
+      kms_master_key_id = aws_kms_key.purpleops.arn
     }
   }
 }
@@ -190,17 +190,17 @@ resource "aws_s3_bucket_lifecycle_configuration" "artifacts" {
 # KMS Key — Encryption at Rest
 ###############################################################################
 
-resource "aws_kms_key" "sentinel_ai" {
-  description             = "Sentinel AI encryption key"
+resource "aws_kms_key" "purpleops" {
+  description             = "PurpleOps encryption key"
   deletion_window_in_days = 7
   enable_key_rotation     = true
 
   tags = { Name = "${local.name_prefix}-kms" }
 }
 
-resource "aws_kms_alias" "sentinel_ai" {
+resource "aws_kms_alias" "purpleops" {
   name          = "alias/${local.name_prefix}"
-  target_key_id = aws_kms_key.sentinel_ai.key_id
+  target_key_id = aws_kms_key.purpleops.key_id
 }
 
 ###############################################################################
@@ -408,7 +408,7 @@ resource "aws_iam_role_policy" "coordinator" {
 # App Runner — API Service
 ###############################################################################
 
-resource "aws_apprunner_service" "sentinel_ai" {
+resource "aws_apprunner_service" "purpleops" {
   service_name = "${local.name_prefix}-api"
 
   source_configuration {
@@ -464,7 +464,7 @@ resource "aws_apprunner_service" "sentinel_ai" {
 # CloudWatch — Log Group & Alarms
 ###############################################################################
 
-resource "aws_cloudwatch_log_group" "sentinel_ai" {
+resource "aws_cloudwatch_log_group" "purpleops" {
   name              = "/aws/apprunner/${local.name_prefix}"
   retention_in_days = var.log_retention_days
 }
@@ -474,7 +474,7 @@ resource "aws_cloudwatch_metric_alarm" "high_token_usage" {
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 1
   metric_name         = "TokensUsed"
-  namespace           = "SentinelAI"
+  namespace           = "PurpleOps"
   period              = 3600
   statistic           = "Sum"
   threshold           = 40000

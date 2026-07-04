@@ -12,7 +12,7 @@
               />
             </svg>
           </div>
-          <h1 class="logo-text">Sentinel AI</h1>
+          <h1 class="logo-text">PurpleOps</h1>
         </div>
         <p class="register-subtitle">Request access to the security platform</p>
       </div>
@@ -272,7 +272,7 @@
           <h3 class="notice-title">Secure Registration</h3>
           <p class="notice-description">
             All access requests are reviewed by our security team. Only
-            authorized personnel will be granted access to the Sentinel AI platform.
+            authorized personnel will be granted access to the PurpleOps platform.
           </p>
         </div>
       </div>

@@ -44,7 +44,7 @@ logger = setup_logger(__name__)
 
 class AgentOrchestrator:
     """
-    Main Orchestrator for Sentinel AI Multi-Agent System
+    Main Orchestrator for PurpleOps Multi-Agent System
     
     Manages all 13 agents:
     - 5 Offensive Agents

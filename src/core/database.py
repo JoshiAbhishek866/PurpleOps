@@ -1,5 +1,5 @@
 """
-MongoDB Database Client for Sentinel AI Orchestrator
+MongoDB Database Client for PurpleOps Orchestrator
 Handles all database operations
 """
 

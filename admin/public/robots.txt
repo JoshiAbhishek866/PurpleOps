@@ -1,4 +1,4 @@
-# Sentinel AI Admin Panel - robots.txt
+# PurpleOps Admin Panel - robots.txt
 # Admin panel should NOT be indexed by search engines
 
 User-agent: *

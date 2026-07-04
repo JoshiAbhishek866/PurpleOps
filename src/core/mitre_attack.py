@@ -1,5 +1,5 @@
 """
-MITRE ATT&CK Mapping for Sentinel AI
+MITRE ATT&CK Mapping for PurpleOps
 
 Maps agent actions to MITRE ATT&CK technique IDs for enterprise
 credibility and standardized threat classification.
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 # ==================== ATT&CK Technique Database ====================
-# Curated subset relevant to Sentinel AI's agent capabilities.
+# Curated subset relevant to PurpleOps's agent capabilities.
 # Full MITRE ATT&CK has 200+ techniques — we map only what our agents do.
 
 ATTACK_TECHNIQUES: Dict[str, Dict] = {
@@ -155,7 +155,7 @@ ATTACK_TECHNIQUES: Dict[str, Dict] = {
 
 # ==================== Agent Action → ATT&CK Mapping ====================
 
-# Maps Sentinel AI agent action names to MITRE ATT&CK technique IDs
+# Maps PurpleOps agent action names to MITRE ATT&CK technique IDs
 ACTION_TO_TECHNIQUE: Dict[str, List[str]] = {
     # Red Agent actions
     "sql_injection_attempt":      ["T1190"],
@@ -184,7 +184,7 @@ ACTION_TO_TECHNIQUE: Dict[str, List[str]] = {
 
 class MitreAttackMapper:
     """
-    Maps Sentinel AI agent actions to MITRE ATT&CK framework techniques.
+    Maps PurpleOps agent actions to MITRE ATT&CK framework techniques.
 
     Usage:
         mapper = MitreAttackMapper()

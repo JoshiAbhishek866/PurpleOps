@@ -1,7 +1,7 @@
-# Design Document: Sentinel AI
+# Design Document: PurpleOps
 ## Autonomous Purple Teaming Platform
 
-**Project Name:** Sentinel AI  
+**Project Name:** PurpleOps  
 **Tagline:** "Attack to Defend. Autonomously."  
 **Version:** 2.0  
 **Date:** March 16, 2026
@@ -10,10 +10,10 @@
 
 ## 1. Executive Summary
 
-Sentinel AI is an autonomous purple teaming platform that deploys dual-model AI agents (Red Team offensive + Blue Team defensive) backed by a 12-agent orchestration system to validate vulnerabilities through active exploitation and auto-remediation. Built on AWS serverless architecture with lifecycle hooks, persistent campaign memory, and an attack-defense feedback loop.
+PurpleOps is an autonomous purple teaming platform that deploys dual-model AI agents (Red Team offensive + Blue Team defensive) backed by a 12-agent orchestration system to validate vulnerabilities through active exploitation and auto-remediation. Built on AWS serverless architecture with lifecycle hooks, persistent campaign memory, and an attack-defense feedback loop.
 
 ### 1.1 Key Differentiators
-- **Active Validation:** Unlike GuardDuty's passive monitoring, Sentinel AI actively exploits vulnerabilities to validate real risk.
+- **Active Validation:** Unlike GuardDuty's passive monitoring, PurpleOps actively exploits vulnerabilities to validate real risk.
 - **Attack-Defense Feedback Loop:** Red Agent probes Blue's past defenses; Blue responds to Red's latest findings.
 - **Persistent Campaign Memory:** DynamoDB-backed per-target memory with 90-day TTL enables cross-session learning.
 - **Lifecycle Hooks:** Automatic context loading and result persistence for every agent execution.

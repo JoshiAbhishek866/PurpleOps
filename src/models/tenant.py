@@ -1,5 +1,5 @@
 """
-Tenant Model for Sentinel AI Multi-Tenancy
+Tenant Model for PurpleOps Multi-Tenancy
 
 Defines the data structures for tenant isolation.
 Each organization gets a tenant_id that scopes all data.

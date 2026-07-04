@@ -1,5 +1,5 @@
 """
-Structured Agent Memory for Sentinel AI
+Structured Agent Memory for PurpleOps
 
 Extends CampaignMemoryManager with three memory types:
 1. Episodic: Full campaign transcripts (what was tried, what happened)

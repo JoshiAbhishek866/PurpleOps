@@ -19,7 +19,7 @@ const sidebar = useSidebarStore()
       <RouterLink custom to="/" v-slot="{ href, navigate }">
         <CSidebarBrand v-bind="$attrs" as="a" :href="href" @click="navigate">
           <div class="sidebar-brand-full d-flex align-items-center">
-            <span class="text-primary fw-bold fs-4">Sentinel AI</span>
+            <span class="text-primary fw-bold fs-4">PurpleOps</span>
           </div>
           <div class="sidebar-brand-narrow"><span class="text-primary fw-bold fs-5">HS</span></div>
         </CSidebarBrand>

@@ -23,10 +23,10 @@ class SEOMetadata(BaseModel):
     ogImage: Optional[str] = None
     ogType: Optional[str] = "website"
     twitterCard: Optional[str] = "summary_large_image"
-    twitterSite: Optional[str] = "@Sentinel AI"
+    twitterSite: Optional[str] = "@PurpleOps"
     canonical: Optional[str] = None
     robots: Optional[str] = "index, follow"
-    author: Optional[str] = "Sentinel AI Team"
+    author: Optional[str] = "PurpleOps Team"
 
 
 class PageSEO(BaseModel):
@@ -40,12 +40,12 @@ class BulkSEOUpdate(BaseModel):
 
 
 class GlobalSEO(BaseModel):
-    siteName: str = "Sentinel AI"
-    siteUrl: str = "https://Sentinel AI.com"
-    defaultOgImage: str = "https://Sentinel AI.com/og-image.jpg"
+    siteName: str = "PurpleOps"
+    siteUrl: str = "https://PurpleOps.com"
+    defaultOgImage: str = "https://PurpleOps.com/og-image.jpg"
     themeColor: str = "#8b5cf6"
-    twitterSite: str = "@Sentinel AI"
-    defaultAuthor: str = "Sentinel AI Team"
+    twitterSite: str = "@PurpleOps"
+    defaultAuthor: str = "PurpleOps Team"
 
 
 # API Endpoints
@@ -206,13 +206,13 @@ def get_default_seo(page: str) -> dict:
             "title": "Secure Your Digital Assets",
             "description": "Advanced cybersecurity analytics and threat detection platform designed for modern organizations. Real-time monitoring, AI-powered insights, and automated defense mechanisms.",
             "keywords": "cybersecurity, AI security, threat detection, vulnerability scanning, security analytics, penetration testing",
-            "ogImage": "https://Sentinel AI.com/og-home.jpg",
+            "ogImage": "https://PurpleOps.com/og-home.jpg",
             "ogType": "website"
         },
         "about": {
-            "title": "About Sentinel AI",
-            "description": "Learn about Sentinel AI's mission to provide cutting-edge cybersecurity solutions. Our team of experts is dedicated to protecting organizations worldwide.",
-            "keywords": "about Sentinel AI, cybersecurity company, security experts, mission, team",
+            "title": "About PurpleOps",
+            "description": "Learn about PurpleOps's mission to provide cutting-edge cybersecurity solutions. Our team of experts is dedicated to protecting organizations worldwide.",
+            "keywords": "about PurpleOps, cybersecurity company, security experts, mission, team",
             "ogType": "website"
         },
         "blog": {
@@ -223,7 +223,7 @@ def get_default_seo(page: str) -> dict:
         },
         "book-demo": {
             "title": "Schedule a Demo",
-            "description": "Get a personalized demonstration of Sentinel AI and see how we can strengthen your cybersecurity posture. Book your demo today.",
+            "description": "Get a personalized demonstration of PurpleOps and see how we can strengthen your cybersecurity posture. Book your demo today.",
             "keywords": "schedule demo, book demo, cybersecurity demo, product demonstration",
             "ogType": "website"
         },
@@ -244,8 +244,8 @@ def get_default_seo(page: str) -> dict:
     }
     
     default = defaults.get(page, {
-        "title": "Sentinel AI - Advanced Cybersecurity Platform",
-        "description": "Protect your organization with Sentinel AI's comprehensive cybersecurity solutions.",
+        "title": "PurpleOps - Advanced Cybersecurity Platform",
+        "description": "Protect your organization with PurpleOps's comprehensive cybersecurity solutions.",
         "keywords": "cybersecurity, security platform, threat detection",
         "ogType": "website"
     })

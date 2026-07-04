@@ -1,5 +1,5 @@
 """
-PII Redaction Utility for Sentinel AI
+PII Redaction Utility for PurpleOps
 
 Scans scan results for sensitive data patterns and redacts them
 before storage or display. Cost-optimized: regex-based, no ML models needed.

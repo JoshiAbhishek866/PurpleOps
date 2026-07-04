@@ -1,5 +1,5 @@
 """
-Multi-LLM Provider for Sentinel AI
+Multi-LLM Provider for PurpleOps
 
 Abstracts LLM calls behind a unified interface so customers
 can choose their provider (Ollama, OpenAI, AWS Bedrock, Azure OpenAI).
