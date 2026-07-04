@@ -2,204 +2,106 @@
 
 > *Attack to Defend. Autonomously.*
 
-PurpleOps deploys AI agents to **find real vulnerabilities, apply real remediations, and verify the fix worked** — without human intervention.
+PurpleOps deploys an 11-agent AI hierarchy to **find real vulnerabilities, apply real remediations, and verify the fix worked** — without human intervention.
 
 ---
 
-## How It Works
+## The Undeniable Value Proposition
 
-```
-Your Target URL
-      │
-      ▼
- Coordinator Agent  ──→  Red Agent (attacks)
-      │                       │ SQL injection, XSS,
-      │                       │ auth bypass, headers
-      │                       ▼
-      └──────────────→  Blue Agent (defends)
-                              │ WAF rules, IP block,
-                              │ verify fix, SOC 2 report
-```
-
-After every Blue remediation, the Coordinator **re-runs the Red attack** to verify the fix. HTTP 403 = confirmed. Still works = escalate.
+Traditional security audits cost $30k and take weeks, delivering only a PDF report. 
+PurpleOps delivers an **automated proof of fix**:
+1. **Attack:** Deterministic and LLM agents probe the target (SQLi, XSS, etc.)
+2. **Defend:** Defensive agents analyze findings and apply AWS WAF remediations.
+3. **Verify:** The Red agent re-runs the exact attack. If it gets an HTTP 403, the fix is verified.
 
 ---
 
-## Quickest Way to Run It
+## 🏗 Architecture (Hybrid AI + Deterministic)
 
-### 1. Spin up a vulnerable test target
+PurpleOps has moved to a robust, cost-effective **Hybrid Architecture** that ensures "One Agent, One Job" and separates AI reasoning from deterministic execution.
+
+**Cloud Brain (LLM Decision Makers)**
+- `Campaign Coordinator`: Central routing and campaign state management.
+- `Red Team Lead`: Formulates attack strategies based on recon data.
+- `Blue Team Lead`: Formulates defense strategies based on vulnerability data.
+- **Primary LLM:** DeepSeek (Default - highly cost-effective) with fallbacks to Ollama (local) and AWS Bedrock.
+
+**Local Execution (Deterministic Workers)**
+- 8 specialized agents (Recon, Scanner, Attack, Threat Detection, Hardening, Compliance, etc.) executing specialized tasks without LLM reasoning.
+- Unified communication via the strict `TaskResult` contract.
+
+---
+
+## Quickstart
+
+### 1. Spin up a vulnerable test target (Only test on sandboxes!)
 
 ```bash
 docker run -d -p 8888:80 vulnerables/web-dvwa
 ```
 
-### 2. Run PurpleOps
+### 2. Install & Configure PurpleOps
 
 ```bash
-git clone https://github.com/JoshiAbhishek866/Sentinal-AI.git
-cd Sentinal-AI
+git clone https://github.com/JoshiAbhishek866/PurpleOps.git
+cd PurpleOps
 
-# Install
+# Install dependencies
 pip install -r requirements.txt
 
-# Configure AWS (minimum needed: region + credentials)
+# Configure Environment
 cp .env.example .env
-# Edit .env: set AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+```
 
-# Start the API
+**Edit `.env`** to set your LLM provider:
+```env
+# Choose: deepseek, bedrock, or ollama
+LLM_PROVIDER=deepseek
+DEEPSEEK_API_KEY=your_key_here
+
+# Required for WAF remediation capabilities:
+AWS_REGION=us-east-1
+AWS_ACCESS_KEY_ID=your_aws_key
+AWS_SECRET_ACCESS_KEY=your_aws_secret
+```
+
+### 3. Start the API
+
+```bash
 uvicorn src.main:app --host 0.0.0.0 --port 8000
 ```
 
-### 3. Run your first campaign
+### 4. Run a Campaign
 
 ```bash
-curl -X POST http://localhost:8000/campaigns/start \
+curl -X POST http://localhost:8000/api/v1/campaigns/start \
   -H "Content-Type: application/json" \
   -d '{
     "target_url": "http://localhost:8888",
     "target_description": "DVWA local test",
     "max_attack_turns": 2,
-    "max_defense_turns": 2,
-    "token_budget": 20000
+    "max_defense_turns": 2
   }'
 ```
 
-**What comes back:**
-```json
-{
-  "campaign_id": "abc-123",
-  "status": "COMPLETED",
-  "summary": {
-    "findings": {
-      "vulnerabilities": 3,
-      "remediations": 3,
-      "unresolved": 0
-    },
-    "coordinator_decisions": [
-      "Turn 1: Red Agent found 2 new vulnerabilities.",
-      "Turn 1: Blue Agent applied 2 remediations.",
-      "Turn 1 verification: 2/3 remediations confirmed."
-    ]
-  }
-}
-```
+---
+
+## Core Infrastructure
+
+- **`src/llm/provider.py`**: Abstract LLM factory allowing instant switching between DeepSeek, Bedrock, and Ollama.
+- **`src/agents/coordinator.py`**: State machine supervising the Red/Blue Team Leads.
+- **`src/models/`**: Defines the `TaskResult` contract, providing a universal schema enabling deterministic agents to communicate flawlessly with the Cloud Brain.
 
 ---
 
-## Or Run With Docker
+## Roadmap
 
-```bash
-docker build -t purpleops .
-docker run -p 8000:8000 --env-file .env purpleops
-```
-
----
-
-## Prerequisites
-
-- Python 3.11+ (or Docker)
-- AWS account with **Bedrock access** enabled (Claude 3.5 Sonnet)
-- AWS credentials (`AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY`)
-
-> **No WAF/DynamoDB/S3 needed for basic testing.** Only required for full remediation + compliance reports.
-
----
-
-## Environment Variables (Minimum)
-
-```env
-AWS_REGION=us-east-1
-AWS_ACCESS_KEY_ID=your_key
-AWS_SECRET_ACCESS_KEY=your_secret
-BEDROCK_MODEL_ID=anthropic.claude-3-5-sonnet-20241022-v2:0
-```
-
-Full list in `.env.example`.
-
----
-
-## API
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/campaigns/start` | Run a purple team campaign |
-| `GET` | `/campaigns/{id}` | Get campaign results |
-| `GET` | `/health` | Health check |
-| `GET` | `/registry/agents` | List registered agents |
-
-**Campaign parameters:**
-
-| Parameter | Default | Description |
-|---|---|---|
-| `target_url` | required | Sandbox/staging URL to test |
-| `max_attack_turns` | 5 | Max Red Agent turns |
-| `max_defense_turns` | 5 | Max Blue Agent turns |
-| `token_budget` | 50000 | Bedrock token limit (~$1.50) |
-
----
-
-## What Gets Tested
-
-**Red Agent (real HTTP requests via httpx):**
-- SQL injection — detects SQL errors in response body
-- XSS — checks if payloads reflect unencoded
-- Authentication bypass — enumerates `/admin`, `/.env`, `/api/users`
-- Security headers — checks for missing CSP, HSTS, X-Frame-Options
-
-**Blue Agent (real AWS SDK calls via boto3):**
-- WAF IP block — `wafv2.create_ip_set`
-- WAF managed rule — `wafv2.update_web_acl` (SQLi/XSS rule groups)
-- Re-verification — re-runs attack, confirms HTTP 403
-- SOC 2 report — JSON uploaded to S3
-
----
-
-## Deploy to AWS (Optional)
-
-For full production deployment with WAF, CI/CD, and compliance reports:
-
-```bash
-# One-time setup
-bash infrastructure/bootstrap.sh
-
-# Deploy
-cd infrastructure
-terraform init
-terraform apply -var-file="terraform.tfvars"
-```
-
-See `infrastructure/README.md` for full steps.
-
----
-
-## Supported Test Targets
-
-**Only point at sandboxes — never production.**
-
-| Target | Docker command |
-|---|---|
-| DVWA | `docker run -p 8888:80 vulnerables/web-dvwa` |
-| OWASP Juice Shop | `docker run -p 3000:3000 bkimminich/juice-shop` |
-| WebGoat | `docker run -p 8080:8080 webgoat/webgoat` |
-
----
-
-## Architecture
-
-```
-src/
-├── agents/
-│   ├── coordinator_agent.py  # Supervisor — owns state, prevents loops
-│   ├── red_agent.py          # HTTP attacks (httpx)
-│   └── blue_agent.py         # AWS remediations (boto3) + verify
-├── core/
-│   ├── agent_registry.py     # Bedrock AgentCore registry
-│   └── orchestrator.py       # 13-agent system
-└── main.py                   # FastAPI app
-infrastructure/               # Terraform IaC (AWS full stack)
-```
-
----
+- [x] Unify Red/Blue systems into a single Coordinator hierarchy
+- [x] Abstraction layer for LLM (DeepSeek integration)
+- [x] Standardize Agent Communication (`TaskResult` contract)
+- [ ] Migrate Campaign State from DynamoDB to MongoDB
+- [ ] Build and release standalone `purpleops` CLI package
+- [ ] Deploy Cloud Brain to Railway
 
 ## License
 
