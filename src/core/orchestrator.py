@@ -5,7 +5,7 @@ Coordinates all 13 security agents and integrations
 
 import asyncio
 from typing import Dict, List, Optional, Any
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 
 from src.core.database import Database
@@ -136,7 +136,7 @@ class AgentOrchestrator:
             "agent_type": agent_type,
             "target": target,
             "status": "running",
-            "started_at": datetime.utcnow()
+            "started_at": datetime.now(timezone.utc)
         }
         
         await self.db.save_execution(execution_record)
@@ -199,7 +199,7 @@ class AgentOrchestrator:
             await self.db.update_execution(execution_id, {
                 "status": "completed",
                 "result_id": result_id,
-                "completed_at": datetime.utcnow()
+                "completed_at": datetime.now(timezone.utc)
             })
             
             logger.info(f"✅ {agent_type} execution completed: {execution_id}")
@@ -212,7 +212,7 @@ class AgentOrchestrator:
             await self.db.update_execution(execution_id, {
                 "status": "failed",
                 "error": str(e),
-                "completed_at": datetime.utcnow()
+                "completed_at": datetime.now(timezone.utc)
             })
             
             return {
@@ -334,7 +334,7 @@ class AgentOrchestrator:
             "results": results,
             "completed_agents": len(results),
             "total_agents": len(agent_sequence),
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
         
         logger.info(f"✅ Workflow completed: {workflow_name}")

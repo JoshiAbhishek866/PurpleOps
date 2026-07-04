@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Request
-from datetime import datetime
+from datetime import datetime, timezone
 
 router = APIRouter()
 
@@ -29,7 +29,7 @@ async def update_content(section: str, request: Request):
     
     result = await db.website_content.update_one(
         {"section": section},
-        {"$set": {"content": content_data, "updatedAt": datetime.utcnow()}},
+        {"$set": {"content": content_data, "updatedAt": datetime.now(timezone.utc)}},
         upsert=True
     )
     

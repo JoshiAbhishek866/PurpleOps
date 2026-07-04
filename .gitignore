@@ -56,5 +56,18 @@ htmlcov/
 # Kiro
 .kiro/cache/
 
-# Kiro steering/memory files — sensitive, keep local only
+# Docker
+data/
+reports/
+
+# Gemini
+.gemini/
+
+# ── Sensitive strategy docs — NEVER push to GitHub ──────────
+# Kiro steering/memory files (project decisions, API hints)
 .kiro/steering/project-memory.md
+.kiro/steering/*.md
+
+# Kiro research files (RCA, GTM strategy, architecture decisions,
+# competitive analysis, cost models — all private)
+.kiro/research/

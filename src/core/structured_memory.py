@@ -12,7 +12,7 @@ Fail-graceful: works without any database if needed.
 
 import logging
 from typing import Dict, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +55,7 @@ class StructuredMemory:
             "actions": actions,
             "outcome": outcome,
             "actor_id": actor_id,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "memory_type": "episodic",
         }
         try:
@@ -149,7 +149,7 @@ class StructuredMemory:
             "source_campaign_id": source_campaign_id,
             "uses": 0,
             "last_used": None,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "memory_type": "procedural",
         }
         try:
@@ -194,7 +194,7 @@ class StructuredMemory:
             from bson import ObjectId
             update = {
                 "$inc": {"uses": 1},
-                "$set": {"last_used": datetime.utcnow().isoformat()},
+                "$set": {"last_used": datetime.now(timezone.utc).isoformat()},
             }
             # Adjust success rate with exponential moving average
             if not succeeded:

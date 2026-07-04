@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 import bcrypt
 
 async def seed_database(db):
@@ -15,7 +15,7 @@ async def seed_database(db):
             "lastName": "User",
             "role": "admin",
             "permissions": ["all"],
-            "createdAt": datetime.utcnow()
+            "createdAt": datetime.now(timezone.utc)
         })
         print("✓ Admin user seeded")
     
@@ -31,7 +31,7 @@ async def seed_database(db):
                     {"name": "Blog", "path": "/blog"}
                 ]
             },
-            "updatedAt": datetime.utcnow()
+            "updatedAt": datetime.now(timezone.utc)
         })
         print("✓ Header content seeded")
     
@@ -89,7 +89,7 @@ async def seed_database(db):
                     {"name": "GitHub", "url": "#", "icon": "github"}
                 ]
             },
-            "updatedAt": datetime.utcnow()
+            "updatedAt": datetime.now(timezone.utc)
         })
         print("✓ Footer content seeded")
     

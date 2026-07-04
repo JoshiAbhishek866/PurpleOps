@@ -6,7 +6,7 @@ Allows admin to manage SEO metadata for frontend pages
 from fastapi import APIRouter, HTTPException, Request, Depends
 from pydantic import BaseModel, HttpUrl
 from typing import Optional, List, Dict
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 from dotenv import load_dotenv
 
@@ -76,7 +76,7 @@ async def update_global_seo(settings: GlobalSEO, request: Request):
         {
             "$set": {
                 "settings": settings.dict(),
-                "updatedAt": datetime.utcnow()
+                "updatedAt": datetime.now(timezone.utc)
             }
         },
         upsert=True
@@ -130,7 +130,7 @@ async def update_page_seo(page: str, seo: SEOMetadata, request: Request):
     page_data = {
         "page": page,
         "seo": seo.dict(),
-        "updatedAt": datetime.utcnow()
+        "updatedAt": datetime.now(timezone.utc)
     }
     
     result = await db.seo_pages.update_one(
@@ -180,7 +180,7 @@ async def bulk_update_seo(bulk_update: BulkSEOUpdate, request: Request):
         page_data = {
             "page": page_seo.page,
             "seo": page_seo.seo.dict(),
-            "updatedAt": datetime.utcnow()
+            "updatedAt": datetime.now(timezone.utc)
         }
         
         await db.seo_pages.update_one(

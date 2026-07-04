@@ -8,7 +8,7 @@ Cost-optimized: stores to MongoDB alongside operational data (no separate servic
 import hashlib
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
@@ -65,7 +65,7 @@ class AuditLogger:
             "agent_type": agent_type,
             "result_summary": result_summary[:500],  # cap size
             "metadata": metadata or {},
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
         # Add integrity hash

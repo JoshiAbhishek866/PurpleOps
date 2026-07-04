@@ -282,6 +282,15 @@ class CoordinatorAgent:
                 None, red.execute_campaign, target_info
             )
 
+            # Track token usage from LLM response metadata
+            if isinstance(result, dict):
+                usage = result.get("usage_metadata") or result.get("llm_output", {})
+                if isinstance(usage, dict):
+                    state.tokens_used += (
+                        usage.get("total_tokens", 0) or
+                        usage.get("input_tokens", 0) + usage.get("output_tokens", 0)
+                    )
+
             # Extract findings — deduplicate against already-known vulnerability types
             existing_types = {f.get("type") for f in state.vulnerabilities_found}
             all_findings = self._extract_findings(result, "RED")
@@ -340,6 +349,15 @@ class CoordinatorAgent:
             result = await loop.run_in_executor(
                 None, blue.respond_to_threat, threat_info
             )
+
+            # Track token usage from Blue Agent response
+            if isinstance(result, dict):
+                usage = result.get("usage_metadata") or result.get("llm_output", {})
+                if isinstance(usage, dict):
+                    state.tokens_used += (
+                        usage.get("total_tokens", 0) or
+                        usage.get("input_tokens", 0) + usage.get("output_tokens", 0)
+                    )
 
             remediations = self._extract_remediations(result)
             state.blue_results.append(result)

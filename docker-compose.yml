@@ -1,0 +1,97 @@
+# ============================================
+# Sentinel AI — Full-Stack Docker Compose
+# One-command quickstart: docker compose up
+# ============================================
+#
+# Services:
+#   sentinel-ai    → FastAPI application (port 8000)
+#   mongo          → MongoDB database (port 27017)
+#   dvwa           → DVWA test target (port 8888)
+#   juice-shop     → OWASP Juice Shop test target (port 3000)
+#
+# Usage:
+#   cp .env.example .env        # Configure AWS credentials
+#   docker compose up -d        # Start all services
+#   curl http://localhost:8000/health  # Verify API
+#
+# Run a campaign against DVWA:
+#   curl -X POST http://localhost:8000/campaigns/start \
+#     -H "Content-Type: application/json" \
+#     -d '{"target_url":"http://dvwa:80","target_description":"DVWA local test"}'
+
+services:
+  # ── Sentinel AI API ──────────────────────────
+  sentinel-ai:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sentinel-ai
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - MONGO_URL=mongodb://mongo:27017
+      - MONGO_DB=sentinel_ai
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./reports:/app/reports
+    networks:
+      - sentinel-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # ── MongoDB ──────────────────────────────────
+  mongo:
+    image: mongo:7.0
+    container_name: sentinel-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - sentinel-net
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  # ── DVWA — Damn Vulnerable Web Application ───
+  dvwa:
+    image: vulnerables/web-dvwa
+    container_name: sentinel-dvwa
+    ports:
+      - "8888:80"
+    networks:
+      - sentinel-net
+    restart: unless-stopped
+
+  # ── OWASP Juice Shop ─────────────────────────
+  juice-shop:
+    image: bkimminich/juice-shop
+    container_name: sentinel-juice-shop
+    ports:
+      - "3000:3000"
+    networks:
+      - sentinel-net
+    restart: unless-stopped
+
+volumes:
+  mongo-data:
+    driver: local
+
+networks:
+  sentinel-net:
+    driver: bridge

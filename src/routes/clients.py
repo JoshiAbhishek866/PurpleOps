@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Request
-from datetime import datetime
+from datetime import datetime, timezone
 from bson import ObjectId
 
 router = APIRouter()
@@ -49,7 +49,7 @@ async def create_client(request: Request):
         "services": data.get("services", []),
         "securityModels": data.get("securityModels", {"offensive": False, "defensive": False}),
         "isActive": data.get("isActive", True),
-        "createdAt": datetime.utcnow()
+        "createdAt": datetime.now(timezone.utc)
     }
     
     result = await db.client_companies.insert_one(client_doc)
@@ -64,7 +64,7 @@ async def update_client(client_id: str, request: Request):
     data = await request.json()
     
     update_data = {k: v for k, v in data.items() if k not in ["_id", "id"]}
-    update_data["updatedAt"] = datetime.utcnow()
+    update_data["updatedAt"] = datetime.now(timezone.utc)
     
     result = await db.client_companies.update_one(
         {"_id": ObjectId(client_id)},

@@ -5,7 +5,7 @@ Handles all database operations
 
 from motor.motor_asyncio import AsyncIOMotorClient
 from typing import Dict, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from bson import ObjectId
 
 from src.utils.logger import setup_logger
@@ -52,8 +52,8 @@ class Database:
             collection = self.db.agent_results
             
             # Add metadata
-            result["created_at"] = datetime.utcnow()
-            result["updated_at"] = datetime.utcnow()
+            result["created_at"] = datetime.now(timezone.utc)
+            result["updated_at"] = datetime.now(timezone.utc)
             
             insert_result = await collection.insert_one(result)
             result_id = str(insert_result.inserted_id)
@@ -127,7 +127,7 @@ class Database:
             config_doc = {
                 "agent_type": agent_type,
                 "config": config,
-                "updated_at": datetime.utcnow()
+                "updated_at": datetime.now(timezone.utc)
             }
             
             await collection.update_one(
@@ -172,7 +172,7 @@ class Database:
                 "agent_type": agent_type,
                 "workflow_id": workflow_id,
                 "webhook_url": webhook_url,
-                "updated_at": datetime.utcnow()
+                "updated_at": datetime.now(timezone.utc)
             }
             
             await collection.update_one(
@@ -208,7 +208,7 @@ class Database:
         try:
             collection = self.db.executions
             
-            execution["created_at"] = datetime.utcnow()
+            execution["created_at"] = datetime.now(timezone.utc)
             
             result = await collection.insert_one(execution)
             execution_id = str(result.inserted_id)
@@ -228,7 +228,7 @@ class Database:
         try:
             collection = self.db.executions
             
-            updates["updated_at"] = datetime.utcnow()
+            updates["updated_at"] = datetime.now(timezone.utc)
             
             result = await collection.update_one(
                 {"_id": ObjectId(execution_id)},

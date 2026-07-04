@@ -1,4 +1,4 @@
-# .kiroignore - Sentinel AI
+# .kiroignore - PurpleOps
 # ============================================================
 # Tells Kiro which files/folders to EXCLUDE from its context.
 # Equivalent to .claudeignore / .gitignore but for Kiro AI.
@@ -94,7 +94,7 @@ desktop.ini
 htmlcov/
 coverage.xml
 
-# ── Legacy source folder ─────────────────────────────────────────
+# ── Legacy source folder ─────────────────────────────────────
 HavoSec-Main-main/admin/public/
 HavoSec-Main-main/frontend/public/
 HavoSec-Main-main/content/pdfs/
@@ -104,8 +104,14 @@ HavoSec-Main-main/content/xl/
 .kiro/cache/
 .kiro/sessions/
 
-# ── Kiro steering/memory files (sensitive — keep local only) ─
-# These contain project decisions, API keys hints, and internal
-# notes that should not be publicly visible on GitHub.
+# ── Kiro steering/memory files (SENSITIVE — keep local only) ─
+# These contain project decisions, API key hints, competitive
+# analysis, cost models, and internal strategy notes that
+# should NEVER be publicly visible on GitHub.
 .kiro/steering/project-memory.md
 .kiro/steering/*.md
+
+# ── Kiro research files (SENSITIVE strategy docs) ────────────
+# Contains RCA, GTM strategy, agent architecture decisions,
+# competitive analysis, cost models. Keep local only.
+.kiro/research/

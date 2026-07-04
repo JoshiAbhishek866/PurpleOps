@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Request, Depends
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 import bcrypt
 # import jwt  <-- This was causing the conflict with the wrong 'jwt' library
 from jose import jwt, ExpiredSignatureError, JWTError
@@ -14,7 +14,7 @@ def create_token(user_id: str, email: str):
     payload = {
         "user_id": user_id,
         "email": email,
-        "exp": datetime.utcnow() + timedelta(hours=8)
+        "exp": datetime.now(timezone.utc) + timedelta(hours=8)
     }
     return jwt.encode(payload, JWT_SECRET, algorithm="HS256")
 

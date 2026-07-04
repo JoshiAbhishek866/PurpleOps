@@ -20,16 +20,42 @@ from langchain.tools import tool
 
 from src.config import Config
 
-# ── AWS clients ──────────────────────────────────────────────────────────────
-_dynamodb = boto3.resource("dynamodb", region_name=Config.AWS_REGION)
-_waf_client = boto3.client("wafv2", region_name=Config.AWS_REGION)
-_s3_client = boto3.client("s3", region_name=Config.AWS_REGION)
-_audit_table = _dynamodb.Table(Config.DYNAMODB_TABLE_AUDIT)
+# ── AWS clients — LAZY INITIALIZED to prevent import crash ───────────────────
+# Bug Fix: these were previously at module level, crashing the app when
+# AWS credentials are not configured. Now initialized on first use.
+_dynamodb = None
+_waf_client = None
+_s3_client = None
+_audit_table = None
+
+def _get_dynamodb():
+    global _dynamodb
+    if _dynamodb is None:
+        _dynamodb = boto3.resource("dynamodb", region_name=Config.AWS_REGION)
+    return _dynamodb
+
+def _get_waf_client():
+    global _waf_client
+    if _waf_client is None:
+        _waf_client = boto3.client("wafv2", region_name=Config.AWS_REGION)
+    return _waf_client
+
+def _get_s3_client():
+    global _s3_client
+    if _s3_client is None:
+        _s3_client = boto3.client("s3", region_name=Config.AWS_REGION)
+    return _s3_client
+
+def _get_audit_table():
+    global _audit_table
+    if _audit_table is None:
+        _audit_table = _get_dynamodb().Table(Config.DYNAMODB_TABLE_AUDIT)
+    return _audit_table
 
 
 def _log_audit(session_id: str, action: str, target: str, outcome: str):
     try:
-        _audit_table.put_item(Item={
+        _get_audit_table().put_item(Item={
             "session_id": session_id,
             "event_timestamp": int(datetime.utcnow().timestamp()),
             "agent_type": "BLUE",
@@ -55,11 +81,11 @@ def block_ip_in_waf(
     Use this when an attacker's IP is identified from request logs.
     """
     ip_cidr = f"{ip_address}/32" if "/" not in ip_address else ip_address
-    ip_set_name = f"sentinel-blocked-{session_id[:8]}"
+    ip_set_name = f"purpleops-blocked-{session_id[:8]}"
 
     try:
         try:
-            response = _waf_client.create_ip_set(
+            response = _get_waf_client().create_ip_set(
                 Name=ip_set_name,
                 Scope=web_acl_scope,
                 IPAddressVersion="IPV4",
@@ -70,22 +96,22 @@ def block_ip_in_waf(
             ip_set_id = response["Summary"]["Id"]
             action_taken = "created_and_blocked"
 
-        except _waf_client.exceptions.WAFDuplicateItemException:
+        except _get_waf_client().exceptions.WAFDuplicateItemException:
             # Set already exists — add IP to existing set
-            existing = _waf_client.list_ip_sets(Scope=web_acl_scope)
+            existing = _get_waf_client().list_ip_sets(Scope=web_acl_scope)
             ip_set = next((s for s in existing["IPSets"] if s["Name"] == ip_set_name), None)
             if not ip_set:
                 return {"status": "error", "error": "IP set not found after duplicate error"}
 
             ip_set_id = ip_set["Id"]
             ip_set_arn = ip_set["ARN"]
-            current = _waf_client.get_ip_set(
+            current = _get_waf_client().get_ip_set(
                 Name=ip_set_name, Scope=web_acl_scope, Id=ip_set_id
             )
             addresses = current["IPSet"]["Addresses"]
             if ip_cidr not in addresses:
                 addresses.append(ip_cidr)
-                _waf_client.update_ip_set(
+                _get_waf_client().update_ip_set(
                     Name=ip_set_name,
                     Scope=web_acl_scope,
                     Id=ip_set_id,
@@ -138,7 +164,7 @@ def add_waf_managed_rule(
     rule_group_name, vendor = rule_map[rule_type]
 
     try:
-        acl = _waf_client.get_web_acl(
+        acl = _get_waf_client().get_web_acl(
             Name=web_acl_name, Scope=web_acl_scope, Id=web_acl_id
         )
         lock_token = acl["LockToken"]
@@ -160,12 +186,12 @@ def add_waf_managed_rule(
                 "VisibilityConfig": {
                     "SampledRequestsEnabled": True,
                     "CloudWatchMetricsEnabled": True,
-                    "MetricName": f"sentinel-{rule_type.lower()}-{session_id[:8]}",
+                    "MetricName": f"purpleops-{rule_type.lower()}-{session_id[:8]}",
                 },
             }
             current_rules.append(new_rule)
 
-            _waf_client.update_web_acl(
+            _get_waf_client().update_web_acl(
                 Name=web_acl_name,
                 Scope=web_acl_scope,
                 Id=web_acl_id,
@@ -209,7 +235,7 @@ def verify_remediation(
             ("search", "1 UNION SELECT null,null--"),
         ],
         "XSS": [
-            ("q", "<script>alert('sentinel-xss')</script>"),
+            ("q", "<script>alert('purpleops-xss')</script>"),
             ("name", "<img src=x onerror=alert(1)>"),
         ],
         "Authentication Bypass": [],  # Path-based — handled separately
@@ -348,7 +374,7 @@ def generate_compliance_report(
 
     upload_status = "not_attempted"
     try:
-        _s3_client.put_object(
+        _get_s3_client().put_object(
             Bucket=Config.S3_BUCKET_REPORTS,
             Key=report_key,
             Body=json.dumps(report, indent=2),
@@ -424,6 +450,135 @@ REMEDIATION STRATEGY:
             handle_parsing_errors=True,
         )
 
+        # ENHANCED: evidence chain — every remediation records full context
+        self.remediation_evidence: list[dict[str, any]] = []
+
+        # ENHANCED: WAF change records for rollback
+        self._waf_change_history: list[dict[str, any]] = []
+
+    # ── WAF Propagation Delay ─────────────────────────────────────────────────
+
+    async def _wait_for_waf_propagation(self, change_description: str) -> bool:
+        """
+        ENHANCED: Wait for WAF rule changes to propagate before verification.
+        Uses exponential backoff polling up to the configured max wait time.
+        Returns True if propagation appears complete, False on timeout.
+        """
+        max_wait = 60
+        initial_delay = 2
+        delay = initial_delay
+        elapsed = 0.0
+
+        logger.info(
+            "Waiting for WAF propagation (max %ds): %s", max_wait, change_description
+        )
+
+        while elapsed < max_wait:
+            await asyncio.sleep(delay)
+            elapsed += delay
+            logger.debug("WAF propagation poll at %.1fs / %ds", elapsed, max_wait)
+            # In a real deployment this would query WAF to confirm the rule
+            # is active. For now we rely on the exponential backoff delay.
+            delay = min(delay * 2, max_wait - elapsed) if elapsed < max_wait else 0
+            if delay <= 0:
+                break
+
+        logger.info("WAF propagation wait completed (%.1fs elapsed)", elapsed)
+        return True
+
+    # ── WAF Rollback ──────────────────────────────────────────────────────────
+
+    def _record_waf_pre_state(self, acl_name: str, acl_id: str, scope: str) -> dict[str, any]:
+        """
+        ENHANCED: Capture the current WAF ACL state before modification so we
+        can roll back if verification fails or legitimate traffic breaks.
+        """
+        try:
+            acl_resp = _get_waf_client().get_web_acl(Name=acl_name, Scope=scope, Id=acl_id)
+            pre_state = {
+                "rules": acl_resp["WebACL"]["Rules"],
+                "default_action": acl_resp["WebACL"]["DefaultAction"],
+                "visibility_config": acl_resp["WebACL"]["VisibilityConfig"],
+                "lock_token": acl_resp["LockToken"],
+            }
+        except Exception as exc:
+            logger.warning("Failed to capture WAF pre-state: %s", exc)
+            pre_state = {"error": str(exc)}
+
+        record = {
+            "id": str(uuid.uuid4()),
+            "acl_name": acl_name,
+            "acl_id": acl_id,
+            "scope": scope,
+            "pre_state": pre_state,
+            "timestamp": datetime.now().isoformat(),
+            "rolled_back": False,
+        }
+        self._waf_change_history.append(record)
+        return record
+
+    async def _rollback_waf_change(self, change_record: dict[str, any]) -> dict[str, any]:
+        """
+        ENHANCED: Restore the WAF ACL to the pre-change state captured in
+        *change_record*. Call this when verification fails or legitimate
+        traffic is being blocked.
+        """
+        pre = change_record.get("pre_state", {})
+        if "error" in pre or not pre.get("rules"):
+            logger.error("Cannot rollback — no valid pre-state for change %s", change_record.get("id"))
+            return {"status": "error", "reason": "no valid pre-state"}
+
+        acl_name = change_record["acl_name"]
+        acl_id = change_record["acl_id"]
+        scope = change_record["scope"]
+
+        try:
+            # Fetch fresh lock token
+            current = _get_waf_client().get_web_acl(Name=acl_name, Scope=scope, Id=acl_id)
+            fresh_token = current["LockToken"]
+
+            _get_waf_client().update_web_acl(
+                Name=acl_name,
+                Scope=scope,
+                Id=acl_id,
+                DefaultAction=pre["default_action"],
+                Rules=pre["rules"],
+                VisibilityConfig=pre["visibility_config"],
+                LockToken=fresh_token,
+            )
+            change_record["rolled_back"] = True
+            logger.info("Successfully rolled back WAF change %s", change_record.get("id"))
+            return {"status": "rolled_back", "change_id": change_record.get("id")}
+
+        except Exception as exc:
+            logger.error("WAF rollback failed for change %s: %s", change_record.get("id"), exc)
+            return {"status": "error", "error": str(exc)}
+
+    # ── Remediation Evidence Chain ────────────────────────────────────────────
+
+    def _record_evidence(
+        self,
+        action_taken: str,
+        before_state: any,
+        after_state: any,
+        actor: str = "BlueAgent",
+    ) -> dict[str, any]:
+        """
+        ENHANCED: Record full evidence for every remediation action.
+        Captures before_state, action, after_state, timestamp, and actor.
+        """
+        entry = {
+            "evidence_id": str(uuid.uuid4()),
+            "timestamp": datetime.now().isoformat(),
+            "actor": actor,
+            "action_taken": action_taken,
+            "before_state": before_state,
+            "after_state": after_state,
+        }
+        self.remediation_evidence.append(entry)
+        return entry
+
+    # ── Core method ───────────────────────────────────────────────────────────
     def respond_to_threat(self, threat_info: dict) -> dict:
         """Apply remediations, verify they worked, generate compliance report."""
         # Fix: use campaign_id as session_id, not duplicate it

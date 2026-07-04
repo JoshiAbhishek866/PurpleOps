@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Request
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 # import jwt
 from jose import jwt, ExpiredSignatureError, JWTError
 import os
@@ -31,7 +31,7 @@ async def get_overview(request: Request):
     payload = get_user_from_request(request)
     db = request.app.state.db
     
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     last_24h = now - timedelta(hours=24)
     last_7d = now - timedelta(days=7)
     
@@ -72,11 +72,11 @@ async def get_attack_insights(request: Request, period: str = "7d"):
     db = request.app.state.db
     
     if period == "24h":
-        start_date = datetime.utcnow() - timedelta(hours=24)
+        start_date = datetime.now(timezone.utc) - timedelta(hours=24)
     elif period == "30d":
-        start_date = datetime.utcnow() - timedelta(days=30)
+        start_date = datetime.now(timezone.utc) - timedelta(days=30)
     else:
-        start_date = datetime.utcnow() - timedelta(days=7)
+        start_date = datetime.now(timezone.utc) - timedelta(days=7)
     
     # Aggregate by event type
     events_by_type = await db.security_events.aggregate([
@@ -114,7 +114,7 @@ async def get_defense_metrics(request: Request):
     payload = get_user_from_request(request)
     db = request.app.state.db
     
-    last_7d = datetime.utcnow() - timedelta(days=7)
+    last_7d = datetime.now(timezone.utc) - timedelta(days=7)
     
     total_blocked = await db.security_events.count_documents({"status": "blocked", "createdAt": {"$gte": last_7d}})
     total_detected = await db.security_events.count_documents({"createdAt": {"$gte": last_7d}})
@@ -193,6 +193,6 @@ async def get_system_health(request: Request):
                 {"type": "warning", "message": "High memory usage detected on server-02"},
                 {"type": "info", "message": "Scheduled maintenance completed successfully"}
             ],
-            "lastCheck": datetime.utcnow().isoformat()
+            "lastCheck": datetime.now(timezone.utc).isoformat()
         }
     }

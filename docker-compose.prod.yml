@@ -1,0 +1,93 @@
+# ============================================
+# Sentinel AI — Production Docker Compose
+# Usage: docker compose -f docker-compose.prod.yml up -d
+# ============================================
+#
+# Differences from development compose:
+#   - Resource limits (CPU/memory)
+#   - JSON log driver with rotation
+#   - restart: always
+#   - No test targets (DVWA, Juice Shop)
+#   - Quiet MongoDB logging
+
+services:
+  # ── Sentinel AI API ──────────────────────────
+  sentinel-ai:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sentinel-ai-prod
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - MONGO_URL=mongodb://mongo:27017
+      - MONGO_DB=sentinel_ai
+      - LOG_LEVEL=WARNING
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    volumes:
+      - ./logs:/app/logs
+      - ./reports:/app/reports
+    networks:
+      - sentinel-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  # ── MongoDB ──────────────────────────────────
+  mongo:
+    image: mongo:7.0
+    container_name: sentinel-mongo-prod
+    volumes:
+      - mongo-prod-data:/data/db
+    networks:
+      - sentinel-net
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "10"
+    command: ["mongod", "--quiet"]
+
+volumes:
+  mongo-prod-data:
+    driver: local
+
+networks:
+  sentinel-net:
+    driver: bridge

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Request
-from datetime import datetime
+from datetime import datetime, timezone
 from bson import ObjectId
 import re
 
@@ -64,8 +64,8 @@ async def create_post(request: Request):
         "tags": data.get("tags", []),
         "status": data.get("status", "draft"),
         "featuredImage": data.get("featuredImage"),
-        "createdAt": datetime.utcnow(),
-        "updatedAt": datetime.utcnow()
+        "createdAt": datetime.now(timezone.utc),
+        "updatedAt": datetime.now(timezone.utc)
     }
     
     result = await db.blog_posts.insert_one(post_doc)
@@ -81,7 +81,7 @@ async def update_post(post_id: str, request: Request):
     data = await request.json()
     
     update_data = {k: v for k, v in data.items() if k not in ["_id", "id"]}
-    update_data["updatedAt"] = datetime.utcnow()
+    update_data["updatedAt"] = datetime.now(timezone.utc)
     if "title" in update_data:
         update_data["slug"] = slugify(update_data["title"])
     

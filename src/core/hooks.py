@@ -8,7 +8,7 @@ Removes manual glue from the orchestrator.
 
 import logging
 from typing import Dict, Optional, Any
-from datetime import datetime
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +20,7 @@ class AgentEvent:
     def __init__(self, agent_type: str, target: str, **kwargs):
         self.agent_type = agent_type
         self.target = target
-        self.timestamp = datetime.utcnow()
+        self.timestamp = datetime.now(timezone.utc)
         self.extra = kwargs
 
 

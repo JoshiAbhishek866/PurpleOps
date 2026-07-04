@@ -2,7 +2,7 @@
 # Utility function to create admin notifications
 async def create_admin_notification(db, notification_type: str, title: str, message: str, data: dict = None):
     """Helper to create notifications for admin panel"""
-    from datetime import datetime
+    from datetime import datetime, timezone
     
     notification = {
         "recipient": "admin",
@@ -11,7 +11,7 @@ async def create_admin_notification(db, notification_type: str, title: str, mess
         "message": message,
         "data": data or {},
         "read": False,
-        "createdAt": datetime.utcnow(),
+        "createdAt": datetime.now(timezone.utc),
         "readAt": None
     }
     

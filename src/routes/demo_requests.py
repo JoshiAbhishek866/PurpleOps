@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Request
-from datetime import datetime
+from datetime import datetime, timezone
 from bson import ObjectId
 
 router = APIRouter()
@@ -53,7 +53,7 @@ async def create_demo_request(request: Request):
         "preferredDate": data.get("preferredDate"),
         "status": "new",
         "priority": "low",
-        "createdAt": datetime.utcnow()
+        "createdAt": datetime.now(timezone.utc)
     }
     
     result = await db.demo_requests.insert_one(demo_doc)
@@ -70,7 +70,7 @@ async def update_demo_request(request_id: str, request: Request):
     data = await request.json()
     
     update_data = {k: v for k, v in data.items() if k not in ["_id", "id"]}
-    update_data["updatedAt"] = datetime.utcnow()
+    update_data["updatedAt"] = datetime.now(timezone.utc)
     
     result = await db.demo_requests.update_one(
         {"_id": ObjectId(request_id)},
