@@ -16,11 +16,11 @@ from typing import Optional, List, Dict
 
 import boto3
 from langchain.agents import AgentExecutor, create_tool_calling_agent
-from langchain_aws import ChatBedrock
 from langchain.prompts import ChatPromptTemplate
 from langchain.tools import tool
 
 from src.config import Config
+from src.llm.provider import get_provider, TaskResult
 
 # ── AWS clients ──────────────────────────────────────────────────────────────
 _dynamodb = boto3.resource("dynamodb", region_name=Config.AWS_REGION)
@@ -415,15 +415,14 @@ def test_security_headers(target_url: str, session_id: str = "default") -> dict:
 
 class RedAgent:
     def __init__(self):
-        self.llm = ChatBedrock(
-            model_id=Config.BEDROCK_MODEL_ID,
-            region_name=Config.AWS_REGION,
-            model_kwargs={
-                "temperature": 0.2,  # Low — deterministic attack decisions
-                "max_tokens": Config.BEDROCK_MAX_TOKENS,
-                "top_p": Config.BEDROCK_TOP_P,
-            },
-        )
+        # Phase 4: ChatBedrock replaced by provider factory.
+        # self.llm is now an LLMProvider; call self.llm.complete(messages)
+        # which returns a TaskResult(success, data, error, tokens_used,
+        # duration_ms, agent_id, timestamp).
+        # If callers used self.llm.invoke(messages) previously, adapt to:
+        #     result = await self.llm.complete(messages)
+        #     response_text = result.data
+        self.llm = get_provider()
 
         self.tools = [
             test_sql_injection,
