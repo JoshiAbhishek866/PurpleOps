@@ -194,18 +194,6 @@ class TestThreatIntel:
 
 
 # ==================== LangGraph Tests ====================
-
-class TestLangGraph:
-    def test_langgraph_available_check(self):
-        from src.core.langgraph_agents import is_langgraph_available
-        # Just verify it doesn't crash
-        result = is_langgraph_available()
-        assert isinstance(result, bool)
-
-    def test_basic_execution_fallback(self):
-        from src.core.langgraph_agents import LangGraphSecurityAgent
-        agent = LangGraphSecurityAgent(agent_type="red")
-        result = agent._basic_execution("test.com")
-        assert result["agent_type"] == "red"
-        assert result["target"] == "test.com"
-        assert "mode" in result
+# REMOVED in Phase 3 step-3: src.core.langgraph_agents has been deleted as
+# dead code (the only consumer, TestLangGraph, was removed in step-1).
+# The unified orchestrator (src.core.orchestrator) replaces this functionality.
